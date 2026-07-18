@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Scot.Massie.KDEConfigParser</RootNamespace>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>1.0</Version>
+        <Authors>Chris Massie</Authors>
+        <Description>Library for saving, loading, and interacting with KDE configuration files.</Description>
+        <PackageProjectUrl>https://github.com/c-massie/KDE-Config-Parser</PackageProjectUrl>
+        <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/c-massie/KDE-Config-Parser</RepositoryUrl>
+        <PackageTags>KDE, Linux, config, configuration, parser, config file, configuration file</PackageTags>
+        <PackageId>Scot.Massie.KDEConfigParser</PackageId>
+        <Title>KDE Config Parser</Title>
+        <RepositoryType>git</RepositoryType>
+        <AssemblyName>KDE Config Parser</AssemblyName>
+        <Product>KDE Config Parser</Product>
+        <AssemblyVersion>1.0</AssemblyVersion>
+    </PropertyGroup>
+
+</Project>
