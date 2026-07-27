@@ -47,9 +47,9 @@ that category, but specifically for where the user's UI culture is English, via 
 `cfg.Clear()` removes everything, `cfg.Clear("Category")` removes everything in that category,
 `cfg.Clear("Category", "Key")` removes the value assigned to that key including any localised values, and
 `cfg.Clear("Category", "Key", "en")` removes specifically the value assigned to that key for the "en" locale. The
-default locale can be cleared without clearing anything else with `cfg.ClearDefaultLocalisation("Category", "Key")`.
+default locale can be cleared without clearing anything else with `cfg.Clear("Category", "Key", "")`.
 
-`cfg["Category", "Key"] = null` does the same thing as `cfg.ClearDeefaultLocalisation("Category", "Key")`, and
+`cfg["Category", "Key"] = null` does the same thing as `cfg.Clear("Category", "Key", "")`, and
 `cfg["Category", "Key", "en"] = null` does the same thing as `cfg.Clear("Category", "Key", "en")`.
 
 ### Reading
