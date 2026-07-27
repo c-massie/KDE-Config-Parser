@@ -185,7 +185,7 @@ public class KdeConfigTest
 
                 cfg.GetCategories().Should().BeEmpty();
                 cfg.IsEmpty.Should().BeFalse();
-                cfg.GetKeysInDefaultCategory().Should().BeEquivalentTo(["key1", "key2"]);
+                cfg.GetKeysInCategory(null).Should().BeEquivalentTo(["key1", "key2"]);
                 cfg.Get(null, "key1").Should().Be("value1");
                 cfg.Get(null, "key2").Should().Be("value2");
             }
@@ -204,7 +204,7 @@ public class KdeConfigTest
                 cfg.LoadFromString(source);
 
                 cfg.GetCategories().Should().BeEquivalentTo(["second"]);
-                cfg.GetKeysInDefaultCategory().Should().BeEquivalentTo(["key1"]);
+                cfg.GetKeysInCategory(null).Should().BeEquivalentTo(["key1"]);
                 cfg.GetKeysInCategory("second").Should().BeEquivalentTo(["key2"]);
                 cfg.Get(null,     "key1").Should().Be("value1");
                 cfg.Get("second", "key2").Should().Be("value2");
@@ -316,7 +316,7 @@ public class KdeConfigTest
             cfg.LoadFromString(source2);
 
             cfg.GetCategories().Should().BeEquivalentTo(["second"]);
-            cfg.GetKeysInDefaultCategory().Should().BeEquivalentTo(["key3"]);
+            cfg.GetKeysInCategory(null).Should().BeEquivalentTo(["key3"]);
             cfg.GetKeysInCategory("second").Should().BeEquivalentTo(["key4"]);
             cfg.Get(null,     "key3").Should().Be("value3");
             cfg.Get("second", "key4").Should().Be("value4");
