@@ -58,6 +58,26 @@ public class KdeConfigEntryAssignment
         ShellExpansionIsEnabled = shellExpansionIsEnabled;
         IsLockedDown            = isLockedDown;
     }
+    
+    /// <inheritdoc />
+    IKdeConfigEntryAssignment IKdeConfigEntryAssignment.ReExpanded()
+    {
+        return ReExpanded();
+    }
+    
+    /// <inheritdoc cref="IKdeConfigEntryAssignment.ReExpanded()"/>
+    public KdeConfigEntryAssignment ReExpanded()
+    {
+        if(!ShellExpansionIsEnabled)
+            return this;
+
+        var reExpandedValue = ShellExpand(UnexpandedValue);
+
+        if(reExpandedValue.Equals(Value))
+            return this;
+
+        return new KdeConfigEntryAssignment(RawValue, UnexpandedValue, reExpandedValue, true, IsLockedDown);
+    }
 
     /// <summary>
     /// Creates a new assignment, given a string representation of a value as it appears in the configuration format.
@@ -81,6 +101,9 @@ public class KdeConfigEntryAssignment
                                                                bool   shellExpansionIsEnabled, 
                                                                bool   isLockedDown)
     {
+        if(escapedValue.Any(x => x is '\n' or '\r'))
+            throw new FormatException("Raw values may not contain newlines or carriage returns.");
+        
         var deEscaped = DeEscapeText(escapedValue);
         var expanded  = shellExpansionIsEnabled ? ShellExpand(deEscaped) : deEscaped;
         return new KdeConfigEntryAssignment(escapedValue, deEscaped, expanded, shellExpansionIsEnabled, isLockedDown);

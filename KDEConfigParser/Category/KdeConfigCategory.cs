@@ -26,7 +26,7 @@ public class KdeConfigCategory
         set
         {
             if(value is null)
-                ClearDefaultLocalisation(key);
+                Clear(key, "");
             else
                 Set(key, value);
         }
@@ -69,7 +69,7 @@ public class KdeConfigCategory
     {
         if(name.Contains(']'))
             throw new FormatException("Category names may not contain closing square brackets.");
-        
+
         Name = name;
     }
 
@@ -92,12 +92,6 @@ public class KdeConfigCategory
     }
 
     /// <inheritdoc />
-    public string? GetInvariant(string key)
-    {
-        return GetInvariantInfo(key)?.Value;
-    }
-
-    /// <inheritdoc />
     public KdeConfigEntryAssignment? GetInfo(string key)
     {
         return _entries.GetOrDefault(key)?.GetInfo();
@@ -113,12 +107,6 @@ public class KdeConfigCategory
     public KdeConfigEntryAssignment? GetInfo(string key, CultureInfo locale)
     {
         return _entries.GetOrDefault(key)?.GetInfo(locale);
-    }
-
-    /// <inheritdoc />
-    public KdeConfigEntryAssignment? GetInvariantInfo(string key)
-    {
-        return _entries.GetOrDefault(key)?.GetInvariantInfo();
     }
 
     /// <inheritdoc />
@@ -145,7 +133,7 @@ public class KdeConfigCategory
     public void Set(string key,
                     string locale,
                     string value,
-                    bool expansionsAreEnabled = false,
+                    bool   expansionsAreEnabled = false,
                     bool   isLockedDown         = false)
     {
         GetOrCreateEntry(key).Set(locale, value, isLockedDown, expansionsAreEnabled);
@@ -155,7 +143,7 @@ public class KdeConfigCategory
     public void Set(string      key,
                     CultureInfo locale,
                     string      value,
-                    bool expansionsAreEnabled = false,
+                    bool        expansionsAreEnabled = false,
                     bool        isLockedDown         = false)
     {
         GetOrCreateEntry(key).Set(locale, value, isLockedDown, expansionsAreEnabled);
@@ -177,6 +165,57 @@ public class KdeConfigCategory
     public void Set(string key, CultureInfo locale, KdeConfigEntryAssignment value)
     {
         GetOrCreateEntry(key).Set(locale, value);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string key, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false)
+    {
+        GetOrCreateEntry(key).SetRaw(rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string key,
+                       string locale,
+                       string rawValue,
+                       bool expansionsAreEnabled = false,
+                       bool isLockedDown = false)
+    {
+        GetOrCreateEntry(key).SetRaw(locale, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string      key,
+                       CultureInfo locale,
+                       string      rawValue,
+                       bool        expansionsAreEnabled = false,
+                       bool        isLockedDown         = false)
+    {
+        GetOrCreateEntry(key).SetRaw(locale, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions()
+    {
+        foreach(var (_, entry) in _entries)
+            entry.ReEvaluateExpansions();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string key)
+    {
+        _entries.GetOrDefault(key)?.ReEvaluateExpansions();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string key, string locale)
+    {
+        _entries.GetOrDefault(key)?.ReEvaluateExpansions(locale);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string key, CultureInfo locale)
+    {
+        _entries.GetOrDefault(key)?.ReEvaluateExpansions(locale);
     }
 
     /// <inheritdoc />
@@ -216,23 +255,11 @@ public class KdeConfigCategory
     }
 
     /// <inheritdoc />
-    public void ClearDefaultLocalisation(string key)
-    {
-        if(!_entries.TryGetValue(key, out var entry))
-            return;
-
-        entry.ClearDefaultLocalisation();
-
-        if(entry.IsEmpty)
-            _entries.Remove(key);
-    }
-
-    /// <inheritdoc />
     public void WriteToTextWriter(TextWriter writer, bool includeHeader = true)
     {
         if(includeHeader)
             writer.WriteLine($"[{KdeConfigTextUtils.EscapeText(Name, false)}]");
-        
+
         foreach(var entry in _entries.OrderBy(kv => kv.Key).Select(kv => kv.Value))
             entry.WriteToTextWriter(writer);
     }

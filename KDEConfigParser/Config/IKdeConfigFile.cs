@@ -43,7 +43,7 @@ public interface IKdeConfigFile : IKdeConfig
 
     /// <summary>
     /// If the file backing this exists, replaces the contents of this configuration with what could be read from its
-    /// file. If it doesn't exist, creates a given default configuration file in its place and reads instead.
+    /// file. If it doesn't exist, creates a given default configuration file in its place and reads that instead.
     /// </summary>
     /// <param name="defaultConfiguration">
     /// The formatted text of the default configuration. This should be as it appears in the file.

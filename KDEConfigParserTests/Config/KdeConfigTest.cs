@@ -150,7 +150,7 @@ public class KdeConfigTest
 
                 cfg.GetCategories().Should().BeEquivalentTo(["first"]);
                 cfg.GetKeysInCategory("first").Should().BeEquivalentTo(["key"]);
-                cfg.GetInvariant("first", "key").Should().Be("value1");
+                cfg.Get("first", "key", "").Should().Be("value1");
                 cfg.Get("first", "key", "xx").Should().Be("value2");
             }
 
@@ -169,7 +169,7 @@ public class KdeConfigTest
                 cfg.GetCategories().Should().BeEquivalentTo(["first"]);
                 cfg.GetKeysInCategory("first").Should().BeEquivalentTo(["key"]);
                 cfg.Get("first", "key", "xx").Should().Be("value1");
-                cfg.GetInvariant("first", "key").Should().Be("value2");
+                cfg.Get("first", "key", "").Should().Be("value2");
             }
 
             [Fact]

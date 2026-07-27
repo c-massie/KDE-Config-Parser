@@ -25,7 +25,7 @@ public class KdeConfig : IKdeConfig
         set
         {
             if(value is null)
-                ClearDefaultLocalisation(category, key);
+                Clear(category, key, "");
             else
                 Set(category, key, value);
         }
@@ -94,12 +94,6 @@ public class KdeConfig : IKdeConfig
     }
 
     /// <inheritdoc />
-    public string? GetInvariant(string? category, string key)
-    {
-        return GetInvariantInfo(category, key)?.Value;
-    }
-
-    /// <inheritdoc />
     public KdeConfigEntryAssignment? GetInfo(string? category, string key)
     {
         return GetCategory(category)?.GetInfo(key);
@@ -118,12 +112,6 @@ public class KdeConfig : IKdeConfig
     }
 
     /// <inheritdoc />
-    public KdeConfigEntryAssignment? GetInvariantInfo(string? category, string key)
-    {
-        return GetCategory(category)?.GetInvariantInfo(key);
-    }
-
-    /// <inheritdoc />
     public bool CategoryExists(string categoryName)
     {
         return _namedCategories.ContainsKey(categoryName);
@@ -136,15 +124,12 @@ public class KdeConfig : IKdeConfig
     }
 
     /// <inheritdoc />
-    public ICollection<string> GetKeysInCategory(string category)
+    public ICollection<string> GetKeysInCategory(string? category)
     {
+        if(category is null)
+            return _defaultCategory.GetKeys();
+        
         return _namedCategories.GetOrDefault(category)?.GetKeys() ?? [];
-    }
-
-    /// <inheritdoc />
-    public ICollection<string> GetKeysInDefaultCategory()
-    {
-        return _defaultCategory.GetKeys();
     }
 
     /// <inheritdoc />
@@ -177,6 +162,71 @@ public class KdeConfig : IKdeConfig
                     bool        isLockedDown         = false)
     {
         GetOrCreateCategory(category).Set(key, locale, value, isLockedDown, expansionsAreEnabled);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string? category,
+                       string  key,
+                       string  rawValue,
+                       bool    expansionsAreEnabled = false,
+                       bool    isLockedDown         = false)
+    {
+        GetOrCreateCategory(category).SetRaw(key, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string? category,
+                       string  key,
+                       string  locale,
+                       string  rawValue,
+                       bool    expansionsAreEnabled = false,
+                       bool    isLockedDown         = false)
+    {
+        GetOrCreateCategory(category).SetRaw(key, locale, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void SetRaw(string?     category,
+                       string      key,
+                       CultureInfo locale,
+                       string      rawValue,
+                       bool        expansionsAreEnabled = false,
+                       bool        isLockedDown         = false)
+    {
+        GetOrCreateCategory(category).SetRaw(key, locale, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions()
+    {
+        _defaultCategory.ReEvaluateExpansions();
+
+        foreach(var (_, category) in _namedCategories)
+            category.ReEvaluateExpansions();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string? category)
+    {
+        GetCategory(category)?.ReEvaluateExpansions();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string? category, string key)
+    {
+        GetCategory(category)?.ReEvaluateExpansions(key);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string? category, string key, string locale)
+    {
+        GetCategory(category)?.ReEvaluateExpansions(key, locale);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string? category, string key, CultureInfo locale)
+    {
+        GetCategory(category)?.ReEvaluateExpansions(key, locale);
     }
 
     /// <inheritdoc />
@@ -247,24 +297,6 @@ public class KdeConfig : IKdeConfig
             return;
 
         cat.Clear(key, locale);
-
-        if(cat.IsEmpty)
-            _namedCategories.Remove(category);
-    }
-
-    /// <inheritdoc />
-    public void ClearDefaultLocalisation(string? category, string key)
-    {
-        if(category is null)
-        {
-            _defaultCategory.Clear(key);
-            return;
-        }
-
-        if(!_namedCategories.TryGetValue(category, out var cat))
-            return;
-
-        cat.Clear(key);
 
         if(cat.IsEmpty)
             _namedCategories.Remove(category);

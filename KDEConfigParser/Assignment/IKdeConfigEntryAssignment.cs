@@ -34,4 +34,13 @@ public interface IKdeConfigEntryAssignment
     /// enabled.
     /// </summary>
     string Value { get; }
+
+    /// <summary>
+    /// Gets a version of this assignment where the <see cref="Value">end value</see> has been re-evaluated.
+    /// </summary>
+    /// <returns>
+    /// If shell expansions are enabled and re-evaluating produces a different result, a copy of this with the shell
+    /// expansions re-evaluated. Otherwise, this.
+    /// </returns>
+    IKdeConfigEntryAssignment ReExpanded();
 }

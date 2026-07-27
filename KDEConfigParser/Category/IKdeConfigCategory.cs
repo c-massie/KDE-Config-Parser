@@ -33,17 +33,15 @@ public interface IKdeConfigCategory
     /// </returns>
     /// <exception cref="FormatException">When setting, if the key is not a valid key.</exception>
     /// <remarks>Assigning null to this removes the value. (for the default locale)</remarks>
-    string? this[string key]
-    {
-        get;
-        set;
-    }
+    string? this[string key] { get; set; }
 
     /// <summary>
     /// Accesses the value for the given key, for the given locale.
     /// </summary>
     /// <param name="key">The key to access the value of.</param>
-    /// <param name="locale">The locale to access the value for.</param>
+    /// <param name="locale">
+    /// The locale to access the value for. An empty string to access specifically where no locale is provided.
+    /// </param>
     /// <returns>
     /// The value associated with the given key, appropriate for the given locale. If there is no such entry, this
     /// returns null.
@@ -53,17 +51,15 @@ public interface IKdeConfigCategory
     /// Assigning null to this removes the value for the given locale. Note that doing this doesn't remove the value for
     /// the default locale.
     /// </remarks>
-    string? this[string key, string locale]
-    {
-        get;
-        set;
-    }
+    string? this[string key, string locale] { get; set; }
 
     /// <summary>
     /// Accesses the value for the given key, for the given locale.
     /// </summary>
     /// <param name="key">The key to access the value of.</param>
-    /// <param name="locale">The locale to access the value for.</param>
+    /// <param name="locale">
+    /// The locale to access the value for. The invariant culture to access specifically where no locale is provided.
+    /// </param>
     /// <returns>
     /// The value associated with the given key, appropriate for the given locale. If there is no such entry, this
     /// returns null.
@@ -73,12 +69,8 @@ public interface IKdeConfigCategory
     /// Assigning null to this removes the value for the given locale. Note that doing this doesn't remove the value for
     /// the default locale.
     /// </remarks>
-    string? this[string key, CultureInfo locale]
-    {
-        get;
-        set;
-    }
-    
+    string? this[string key, CultureInfo locale] { get; set; }
+
     /// <summary>
     /// Gets the value assigned to the given key.
     /// </summary>
@@ -93,7 +85,10 @@ public interface IKdeConfigCategory
     /// Gets the value assigned to the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to get the value of.</param>
-    /// <param name="locale">The two-letter code representing the locale to get the value for.</param>
+    /// <param name="locale">
+    /// The two-letter code representing the locale to get the value for. An empty string to get specifically where no
+    /// locale is provided.
+    /// </param>
     /// <returns>
     /// The value assigned to the given key, appropriate for the given locale, or null if there is no such entry.
     /// </returns>
@@ -104,20 +99,14 @@ public interface IKdeConfigCategory
     /// Gets the value assigned to the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to get the value of.</param>
-    /// <param name="locale">The two-letter code representing the locale to get the value for.</param>
+    /// <param name="locale">
+    /// The two-letter code representing the locale to get the value for. The invariant culture to get specifically
+    /// where no locale is provided.
+    /// </param>
     /// <returns>
     /// The value assigned to the given key, appropriate for the given locale, or null if there is no such entry.
     /// </returns>
     string? Get(string key, CultureInfo locale);
-
-    /// <summary>
-    /// Get the value assigned to the given key, specifically with no locale specified.
-    /// </summary>
-    /// <param name="key">The key to get the value of.</param>
-    /// <returns>
-    /// The value assigned to the given key, specifically with no locale tags, or null if there is no such entry.
-    /// </returns>
-    string? GetInvariant(string key);
 
     /// <summary>
     /// Gets the assignment info for the given key.
@@ -133,7 +122,10 @@ public interface IKdeConfigCategory
     /// Gets the assignment info for the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to get information about the value of.</param>
-    /// <param name="locale">The two-letter code representing the locale to get information about the value for.</param>
+    /// <param name="locale">
+    /// The two-letter code representing the locale to get information about the value for. An empty string to get
+    /// specifically where no locale is provided.
+    /// </param>
     /// <returns>
     /// Information about the value assigned to the given key, appropriate for the given locale, or null if there is no
     /// such entry.
@@ -142,25 +134,18 @@ public interface IKdeConfigCategory
     KdeConfigEntryAssignment? GetInfo(string key, string locale);
 
     /// <summary>
-    /// Gets the assignment info for the given key for the given locale..
+    /// Gets the assignment info for the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to get information about the value of.</param>
-    /// <param name="locale">The culture info representing the locale to get information about the value for.</param>
+    /// <param name="locale">
+    /// The culture info representing the locale to get information about the value for. The invariant culture to get
+    /// specifically where no locale is provided.
+    /// </param>
     /// <returns>
     /// Information about the value assigned to the given key, appropriate for the given locale, or null if there is no
     /// such entry.
     /// </returns>
     KdeConfigEntryAssignment? GetInfo(string key, CultureInfo locale);
-
-    /// <summary>
-    /// Gets information about the value assigned to the given key, specifically with no locale specified.
-    /// </summary>
-    /// <param name="key">The key to get information about the value of.</param>
-    /// <returns>
-    /// Information about the value assigned to the given key, specifically with no locale tags, or null if there is no
-    /// such entry.
-    /// </returns>
-    KdeConfigEntryAssignment? GetInvariantInfo(string key);
 
     /// <summary>
     /// Gets the keys in to which values are assigned.
@@ -190,7 +175,10 @@ public interface IKdeConfigCategory
     /// Sets the value for the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to set the value of.</param>
-    /// <param name="locale">The specific locale to set a value for the key for.</param>
+    /// <param name="locale">
+    /// The specific locale to set a value for the key for. An empty string to set specifically for where no locale is
+    /// provided.
+    /// </param>
     /// <param name="value">The value to set.</param>
     /// <param name="expansionsAreEnabled">Whether shell expansion is enabled.</param>
     /// <param name="isLockedDown">Whether the value is locked down.</param>
@@ -204,7 +192,10 @@ public interface IKdeConfigCategory
     /// Sets the value for the given key for the given locale in the given category.
     /// </summary>
     /// <param name="key">The key to set the value of.</param>
-    /// <param name="locale">The specific locale to set a value for the key for.</param>
+    /// <param name="locale">
+    /// The specific locale to set a value for the key for. The invariant culture to set specifically for where no
+    /// locale is provided.
+    /// </param>
     /// <param name="value">The value to set.</param>
     /// <param name="expansionsAreEnabled">Whether shell expansion is enabled.</param>
     /// <param name="isLockedDown">Whether the value is locked down.</param>
@@ -233,7 +224,10 @@ public interface IKdeConfigCategory
     /// Sets the value for the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to set the value of.</param>
-    /// <param name="locale">The specific locale to set a value for the key for.</param>
+    /// <param name="locale">
+    /// The specific locale to set a value for the key for. An empty string to set specifically for where no locale is
+    /// provided.
+    /// </param>
     /// <param name="value">The value to set.</param>
     /// <exception cref="FormatException">If the key is not a valid key.</exception>
     void Set(string key, string locale, KdeConfigEntryAssignment value);
@@ -242,10 +236,92 @@ public interface IKdeConfigCategory
     /// Sets the value for the given key for the given locale.
     /// </summary>
     /// <param name="key">The key to set the value of.</param>
-    /// <param name="locale">The specific locale to set a value for the key for.</param>
+    /// <param name="locale">
+    /// The specific locale to set a value for the key for. The invariant culture to set specifically for where no
+    /// locale is provided.
+    /// </param>
     /// <param name="value">The value to set.</param>
     /// <exception cref="FormatException">If the key is not a valid key.</exception>
     void Set(string key, CultureInfo locale, KdeConfigEntryAssignment value);
+
+    /// <summary>
+    /// Sets the raw value for the given key. This is the value before being de-escaped or expanded.
+    /// </summary>
+    /// <param name="key">The key to set the value for.</param>
+    /// <param name="rawValue">The raw value to set.</param>
+    /// <param name="expansionsAreEnabled">Whether shell expansions are enabled.</param>
+    /// <param name="isLockedDown">Whether the value is locked-down.</param>
+    /// <exception cref="FormatException">If the raw value contains a newline or carriage return.</exception>
+    /// <remarks>
+    /// This sets the key for the invariant locale. i.e. with no locale specified, not even the user's current locale.
+    ///
+    /// For more information on shell expansion and being "locked down", see the userbase page on the file format.
+    /// </remarks>
+    void SetRaw(string key, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false);
+    
+    /// <summary>
+    /// Sets the raw value for the given key for the given locale. This is the value before being de-escaped or
+    /// expanded.
+    /// </summary>
+    /// <param name="key">The key to set the value for.</param>
+    /// <param name="locale">
+    /// The locale to set the raw value for. An empty string to set it without providing a locale.
+    /// </param>
+    /// <param name="rawValue">The raw value to set.</param>
+    /// <param name="expansionsAreEnabled">Whether shell expansions are enabled.</param>
+    /// <param name="isLockedDown">Whether the value is locked-down.</param>
+    /// <exception cref="FormatException">If the raw value contains a newline or carriage return.</exception>
+    /// <remarks>
+    /// For more information on shell expansion and being "locked down", see the userbase page on the file format.
+    /// </remarks>
+    void SetRaw(string key, string locale, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false);
+    
+    /// <summary>
+    /// Sets the raw value for the given key for the given locale. This is the value before being de-escaped or
+    /// expanded.
+    /// </summary>
+    /// <param name="key">The key to set the value for.</param>
+    /// <param name="locale">
+    /// The locale to set the raw value for. The invariant culture to set it without providing a locale.
+    /// </param>
+    /// <param name="rawValue">The raw value to set.</param>
+    /// <param name="expansionsAreEnabled">Whether shell expansions are enabled.</param>
+    /// <param name="isLockedDown">Whether the value is locked-down.</param>
+    /// <exception cref="FormatException">If the raw value contains a newline or carriage return.</exception>
+    /// <remarks>
+    /// For more information on shell expansion and being "locked down", see the userbase page on the file format.
+    /// </remarks>
+    void SetRaw(string key, CultureInfo locale, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false);
+    
+    /// <summary>
+    /// Re-evaluates the shell expansions used in the values in this category.
+    /// </summary>
+    void ReEvaluateExpansions();
+    
+    /// <summary>
+    /// Re-evaluates the shell expansions used in the value(s) for the specified key.
+    /// </summary>
+    /// <param name="key">The key to re-evaluate the shell expansions for.</param>
+    void ReEvaluateExpansions(string key);
+    
+    /// <summary>
+    /// Re-evaluates the shell expansions used in the value(s) for the specified key, specifically for the given locale.
+    /// </summary>
+    /// <param name="key">The key to re-evaluate the shell expansions for.</param>
+    /// <param name="locale">
+    /// The locale to re-evaluate values for. An empty string to re-evaluate specifically where no locale is provided.
+    /// </param>
+    void ReEvaluateExpansions(string key, string locale);
+    
+    /// <summary>
+    /// Re-evaluates the shell expansions used in the value(s) for the specified key, specifically for the given locale.
+    /// </summary>
+    /// <param name="key">The key to re-evaluate the shell expansions for.</param>
+    /// <param name="locale">
+    /// The locale to re-evaluate values for. The invariant culture to re-evaluate specifically where no locale is
+    /// provided.
+    /// </param>
+    void ReEvaluateExpansions(string key, CultureInfo locale);
 
     /// <summary>
     /// Removes all entries in this category.
@@ -262,21 +338,21 @@ public interface IKdeConfigCategory
     /// Removes the value assigned to the given guy for the given locale.
     /// </summary>
     /// <param name="key">The key to clear.</param>
-    /// <param name="locale">The locale to clear the key for.</param>
+    /// <param name="locale">
+    /// The locale to clear the key for. An empty string to remove specifically the values for where no locale is
+    /// provided.
+    /// </param>
     void Clear(string key, string locale);
 
     /// <summary>
     /// Removes the value assigned to the given guy for the given locale.
     /// </summary>
-    /// <param name="key">The key to clear.</param>
-    /// <param name="locale">The locale to clear the key for.</param>
+    /// <param name="key">The key to clear. Null or indicate the default locale.</param>
+    /// <param name="locale">
+    /// The locale to clear the key for. An empty string to remove specifically the values for where no locale is
+    /// provided.
+    /// </param>
     void Clear(string key, CultureInfo locale);
-
-    /// <summary>
-    /// Removes the value assigned to the given guy for the invariant locale.
-    /// </summary>
-    /// <param name="key">The key to clear.</param>
-    void ClearDefaultLocalisation(string key);
 
     /// <summary>
     /// Writes the contents of this category to the given writer.

@@ -31,7 +31,7 @@ public class KdeConfigEntry
     {
         if(key.ContainsAnyOf('[', ']', '='))
             throw new FormatException("Keys cannot contain square brackets or equals signs.");
-        
+
         Key            = key;
         _localisations = new Dictionary<string, KdeConfigEntryAssignment>();
         Localisations  = _localisations.AsReadOnly();
@@ -56,12 +56,6 @@ public class KdeConfigEntry
     }
 
     /// <inheritdoc />
-    public string? GetInvariant()
-    {
-        return GetInvariantInfo()?.Value;
-    }
-
-    /// <inheritdoc />
     public KdeConfigEntryAssignment? GetInfo()
     {
         return _localisations.GetOrDefault(GetCurrentCultureCode()) ?? _defaultLocalisation;
@@ -70,26 +64,21 @@ public class KdeConfigEntry
     /// <inheritdoc />
     public KdeConfigEntryAssignment? GetInfo(string locale)
     {
-        return locale is "iv"
-                   ? _defaultLocalisation
-                   : _localisations.GetOrDefault(locale) ?? _defaultLocalisation;
+        if(locale is "")
+            return _defaultLocalisation;
+
+        return _localisations.GetOrDefault(locale) ?? _defaultLocalisation;
     }
 
     /// <inheritdoc />
     public KdeConfigEntryAssignment? GetInfo(CultureInfo locale)
     {
-        return GetInfo(locale.TwoLetterISOLanguageName);
+        return GetInfo(GetCultureCode(locale));
     }
 
-    /// <inheritdoc />
-    public KdeConfigEntryAssignment? GetInvariantInfo()
-    {
-        return _defaultLocalisation;
-    }
-    
     private string GetCurrentCultureCode()
     {
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return GetCultureCode(CultureInfo.CurrentUICulture);
     }
 
     /// <inheritdoc />
@@ -110,6 +99,27 @@ public class KdeConfigEntry
         Set(locale, new KdeConfigEntryAssignment(value, expansionsAreEnabled, isLockedDown));
     }
 
+    /// <inheritdoc/>
+    public void SetRaw(string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false)
+    {
+        Set(KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+    }
+
+    /// <inheritdoc/>
+    public void SetRaw(string locale, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false)
+    {
+        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+    }
+
+    /// <inheritdoc/>
+    public void SetRaw(CultureInfo locale,
+                       string      rawValue,
+                       bool        expansionsAreEnabled = false,
+                       bool        isLockedDown         = false)
+    {
+        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+    }
+
     /// <inheritdoc />
     public void Set(KdeConfigEntryAssignment value)
     {
@@ -119,19 +129,46 @@ public class KdeConfigEntry
     /// <inheritdoc />
     public void Set(string locale, KdeConfigEntryAssignment value)
     {
-        if(locale is "iv")
+        if(locale is "")
         {
             Set(value);
             return;
         }
-        
+
         _localisations[locale] = value;
     }
 
     /// <inheritdoc />
     public void Set(CultureInfo locale, KdeConfigEntryAssignment value)
     {
-        Set(locale.TwoLetterISOLanguageName, value);
+        Set(GetCultureCode(locale), value);
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions()
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(string locale)
+    {
+        if(locale is "")
+        {
+            if(_defaultLocalisation?.ShellExpansionIsEnabled ?? false)
+                _defaultLocalisation = _defaultLocalisation?.ReExpanded();
+
+            return;
+        }
+
+        if(_localisations.TryGetValue(locale, out var assignment) && assignment.ShellExpansionIsEnabled)
+            _localisations[locale] = assignment.ReExpanded();
+    }
+
+    /// <inheritdoc />
+    public void ReEvaluateExpansions(CultureInfo locale)
+    {
+        ReEvaluateExpansions(GetCultureCode(locale));
     }
 
     /// <inheritdoc />
@@ -144,9 +181,9 @@ public class KdeConfigEntry
     /// <inheritdoc />
     public void Clear(string locale)
     {
-        if(locale is "iv")
+        if(locale is "" or null)
         {
-            ClearDefaultLocalisation();
+            _defaultLocalisation = null;
             return;
         }
 
@@ -156,23 +193,25 @@ public class KdeConfigEntry
     /// <inheritdoc />
     public void Clear(CultureInfo locale)
     {
-        Clear(locale.TwoLetterISOLanguageName);
+        Clear(GetCultureCode(locale));
     }
 
-    /// <inheritdoc />
-    public void ClearDefaultLocalisation()
+    private string GetCultureCode(CultureInfo locale)
     {
-        _defaultLocalisation = null;
+        if(Equals(locale, CultureInfo.InvariantCulture))
+            return "";
+
+        return locale.TwoLetterISOLanguageName;
     }
 
     /// <inheritdoc />
     public void WriteToTextWriter(TextWriter writer)
     {
         var keyDeEscaped = KdeConfigTextUtils.EscapeText(Key);
-        
+
         if(_defaultLocalisation is not null)
         {
-            var tags = BehaviourTagsToString(_defaultLocalisation);
+            var tags          = BehaviourTagsToString(_defaultLocalisation);
             var defaultAsText = $"{keyDeEscaped}{tags}={_defaultLocalisation.RawValue}";
             writer.WriteLine(defaultAsText);
         }
