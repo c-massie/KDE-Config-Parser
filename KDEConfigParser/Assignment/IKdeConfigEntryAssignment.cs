@@ -7,6 +7,21 @@ namespace Scot.Massie.KDEConfigParser.Assignment;
 public interface IKdeConfigEntryAssignment
 {
     /// <summary>
+    /// Whether escaping is enabled. If it is, <c>\n</c>, <c>\r</c>, <c>\t</c>, and <c>\s</c> in the
+    /// <see cref="RawValue">raw value</see> will be translated into a newline, carriage return, tab, and space
+    /// respectively in the <see cref="UnexpandedValue">value before shell expansion</see>, and vice versa. If it's not
+    /// enabled, there will be no attempt to 
+    /// </summary>
+    /// <remarks>
+    /// This flag is not represented in the KDE config file format, it exists purely to aid in interaction with the
+    /// library.
+    /// 
+    /// This allows for values to be processed by other handlers that may, themselves, handle escape codes, such that
+    /// text doesn't need to be escaped multiple times.
+    /// </remarks>
+    bool EscapingIsEnabled { get; }
+
+    /// <summary>
     /// Whether shell expansion is enabled. If it is, references to shell variables will be replaced with what can be
     /// read from bash when querying those variables. See the format documentation for more information.
     /// </summary>

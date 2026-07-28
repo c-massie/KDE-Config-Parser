@@ -24,6 +24,11 @@ public interface IKdeConfigCategory
     bool IsEmpty { get; }
 
     /// <summary>
+    /// Whether this category is the default category for the config it's from.
+    /// </summary>
+    bool IsDefaultCategory { get; }
+
+    /// <summary>
     /// Accesses the value of the given key.
     /// </summary>
     /// <param name="key">The key to access the value of.</param>
@@ -71,6 +76,13 @@ public interface IKdeConfigCategory
     /// </remarks>
     string? this[string key, CultureInfo locale] { get; set; }
 
+    /// <summary>
+    /// Gets whether an entry with the given key exists in this category.
+    /// </summary>
+    /// <param name="key">The key to check for.</param>
+    /// <returns>True if any entry exists in this category with the given key.</returns>
+    bool KeyExists(string key);
+    
     /// <summary>
     /// Gets the value assigned to the given key.
     /// </summary>

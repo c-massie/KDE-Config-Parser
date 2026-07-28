@@ -9,10 +9,21 @@ namespace Scot.Massie.KDEConfigParser.Config;
 /// <inheritdoc cref="IKdeConfig"/>
 public class KdeConfig : IKdeConfig
 {
-    private readonly KdeConfigCategory _defaultCategory = new("");
+    private readonly KdeConfigCategory _defaultCategory;
 
     private readonly IDictionary<string, KdeConfigCategory> _namedCategories
         = new Dictionary<string, KdeConfigCategory>();
+
+    private bool _escapingIsDisabled = false;
+
+    private bool _escapingIsDisabledForDefaultCategory = false;
+
+    private readonly ISet<string> _categoriesEscapingIsDisabledFor = new HashSet<string>();
+
+    private readonly ISet<string> _keysInDefaultCategoryEscapingIsDisabledFor = new HashSet<string>();
+
+    private readonly IDictionary<string, ISet<string>> _keysEscapingIsDisabledFor
+        = new Dictionary<string, ISet<string>>();
 
     /// <inheritdoc />
     public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0;
@@ -59,6 +70,14 @@ public class KdeConfig : IKdeConfig
         }
     }
 
+    /// <summary>
+    /// Creates a new KDE config.
+    /// </summary>
+    public KdeConfig()
+    {
+        _defaultCategory = new(this, true, "");
+    }
+
     private KdeConfigCategory? GetCategory(string? category)
     {
         return category is null ? _defaultCategory : _namedCategories.GetOrDefault(category);
@@ -72,9 +91,20 @@ public class KdeConfig : IKdeConfig
         if(_namedCategories.TryGetValue(category, out var cat))
             return cat;
 
-        return _namedCategories[category] = new KdeConfigCategory(category);
+        return _namedCategories[category] = new KdeConfigCategory(this, false, category);
     }
 
+    /// <inheritdoc />
+    public bool KeyExists(string? category, string key)
+    {
+        var cat = GetCategory(category);
+
+        if(cat is null)
+            return false;
+
+        return cat.KeyExists(key);
+    }
+    
     /// <inheritdoc />
     public string? Get(string? category, string key)
     {
@@ -109,6 +139,34 @@ public class KdeConfig : IKdeConfig
     public KdeConfigEntryAssignment? GetInfo(string? category, string key, CultureInfo locale)
     {
         return GetCategory(category)?.GetInfo(key, locale);
+    }
+
+    /// <inheritdoc />
+    public bool GetWhetherEscapingIsDisabled()
+    {
+        return _escapingIsDisabled;
+    }
+
+    /// <inheritdoc />
+    public bool GetWhetherEscapingIsDisabled(string? categoryName)
+    {
+        return _escapingIsDisabled
+            || categoryName is null
+                   ? _escapingIsDisabledForDefaultCategory
+                   : _categoriesEscapingIsDisabledFor.Contains(categoryName);
+    }
+
+    /// <inheritdoc />
+    public bool GetWhetherEscapingIsDisabled(string? categoryName, string key)
+    {
+        if(GetWhetherEscapingIsDisabled(categoryName))
+            return true;
+
+        var keySet = categoryName is null
+                         ? _keysInDefaultCategoryEscapingIsDisabledFor
+                         : _keysEscapingIsDisabledFor.GetOrDefault(categoryName);
+
+        return keySet?.Contains(key) ?? false;
     }
 
     /// <inheritdoc />
@@ -194,6 +252,61 @@ public class KdeConfig : IKdeConfig
                        bool        isLockedDown         = false)
     {
         GetOrCreateCategory(category).SetRaw(key, locale, rawValue, expansionsAreEnabled, isLockedDown);
+    }
+
+    /// <inheritdoc />
+    public void SetWhetherEscapingIsDisabled(bool value)
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Setting whether escaping is disabled on an already-populated config.");
+        
+        _escapingIsDisabled = value;
+    }
+
+    /// <inheritdoc />
+    public void SetWhetherEscapingIsDisabled(string? category, bool value)
+    {
+        if(category is null)
+        {
+            if(!_defaultCategory.IsEmpty)
+                throw new NotSupportedException(
+                    "Setting whether escaping is disabled on an already-populated category.");
+            
+            _escapingIsDisabledForDefaultCategory = value;
+            return;
+        }
+
+        if(CategoryExists(category))
+            throw new NotSupportedException("Setting whether escaping is disabled on an already-populated category.");
+        
+        if(value)
+            _categoriesEscapingIsDisabledFor.Add(category);
+        else
+            _categoriesEscapingIsDisabledFor.Remove(category);
+    }
+
+    /// <inheritdoc />
+    public void SetWhetherEscapingIsDisabled(string? category, string key, bool value)
+    {
+        if(KeyExists(category, key))
+            throw new NotSupportedException("Setting whether escaping is disabled on an already-populated key.");
+        
+        ISet<string>? keySet;
+        
+        if(category is null)
+        {
+            keySet = _keysInDefaultCategoryEscapingIsDisabledFor;
+        }
+        else
+        {
+            if(!_keysEscapingIsDisabledFor.TryGetValue(category, out keySet))
+                keySet = _keysEscapingIsDisabledFor[category] = new HashSet<string>();
+        }
+        
+        if(value)
+            keySet.Add(key);
+        else
+            keySet.Remove(key);
     }
 
     /// <inheritdoc />
@@ -332,9 +445,13 @@ public class KdeConfig : IKdeConfig
             _namedCategories.Remove(categoriesToRemove[i]);
     }
 
-    private static void ReadFromSingleLineString(KdeConfigCategory category, string source)
+    private void ReadFromSingleLineString(KdeConfigCategory category, string source)
     {
-        var (key, locales, value) = KdeConfigTextUtils.ParsePartsOfEntry(source);
+        var categoryIsDefault = ReferenceEquals(category, _defaultCategory);
+
+        var (key, locales, value)
+            = KdeConfigTextUtils.ParsePartsOfEntry(
+                source, key => !GetWhetherEscapingIsDisabled(categoryIsDefault ? null : category.Name, key));
 
         if(locales.Count == 0)
         {

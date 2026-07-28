@@ -222,7 +222,7 @@ public class KdeConfigTextUtilsTest(KdeConfigTextUtilsTest.Fixture fixture)
                              ? []
                              : localeTagsListString.Split(',', StringSplitOptions.TrimEntries);
 
-        var (resultKey, resultLocales, resultLocalisation) = KdeConfigTextUtils.ParsePartsOfEntry(input);
+        var (resultKey, resultLocales, resultLocalisation) = KdeConfigTextUtils.ParsePartsOfEntry(input, _ => true);
 
         resultKey.Should().Be(key);
         resultLocalisation.RawValue.Should().Be(value);
@@ -245,7 +245,7 @@ public class KdeConfigTextUtilsTest(KdeConfigTextUtilsTest.Fixture fixture)
     {
         var call = () =>
         {
-            var _ = KdeConfigTextUtils.ParsePartsOfEntry(input);
+            var _ = KdeConfigTextUtils.ParsePartsOfEntry(input, _ => true);
         };
 
         call.Should().Throw<FormatException>();

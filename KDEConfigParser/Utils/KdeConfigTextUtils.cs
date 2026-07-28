@@ -302,10 +302,13 @@ public static class KdeConfigTextUtils
     /// </summary>
     /// <param name="unparsedEntry">The entry as it appears in the configuration format.</param>
     /// <returns>A tuple containing the name of the key, a list of the locale read, and the value.</returns>
+    /// <param name="keySupportsEscapingTest">
+    /// Test to determine whether the value for a given key should have escaping enabled.
+    /// See: <see cref="IKdeConfigEntryAssignment.EscapingIsEnabled"/></param>
     /// <exception cref="FormatException">If the string could not be parsed as an entry.</exception>
     [Pure]
     public static (string Key, IList<string> Locales, KdeConfigEntryAssignment Value)
-        ParsePartsOfEntry(string unparsedEntry)
+        ParsePartsOfEntry(string unparsedEntry, Func<string, bool> keySupportsEscapingTest)
     {
         var equalsPosition = unparsedEntry.IndexOf('=');
 
@@ -316,7 +319,13 @@ public static class KdeConfigTextUtils
         var unparsedValue = unparsedEntry[(equalsPosition + 1)..].Trim();
 
         var (key, isLockedDown, expansionsAreEnabled, locales) = ParsePartsOfEntryKey(unparsedKey);
-        var value = KdeConfigEntryAssignment.NewFromEscapedValue(unparsedValue, expansionsAreEnabled, isLockedDown);
+        var escapingIsEnabledInValue = keySupportsEscapingTest(key);
+        
+        var value = KdeConfigEntryAssignment.NewFromEscapedValue(unparsedValue,
+                                                                 escapingIsEnabledInValue,
+                                                                 expansionsAreEnabled,
+                                                                 isLockedDown);
+        
         return (key, locales, value);
     }
 

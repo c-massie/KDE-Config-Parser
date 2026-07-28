@@ -82,6 +82,14 @@ public interface IKdeConfig
     }
 
     /// <summary>
+    /// Gets whether an entry exists in the given category with the given key.
+    /// </summary>
+    /// <param name="category">The category to look in.</param>
+    /// <param name="key">The key to look for.</param>
+    /// <returns>True if any entry exists in the given category with the given key. Otherwise, false.</returns>
+    bool KeyExists(string? category, string key);
+
+    /// <summary>
     /// Gets the value assigned to the given key, in the given category.
     /// </summary>
     /// <param name="category">The category to look for the given key in. Null specifies the default category.</param>
@@ -162,6 +170,30 @@ public interface IKdeConfig
     /// such entry.
     /// </returns>
     KdeConfigEntryAssignment? GetInfo(string? category, string key, CultureInfo locale);
+
+    /// <summary>
+    /// Gets whether escaping is disabled across the entire config. If it's not, it can still be disabled per category
+    /// and per key.
+    /// </summary>
+    /// <returns>True if it's disabled. Otherwise, false.</returns>
+    bool GetWhetherEscapingIsDisabled();
+    
+    /// <summary>
+    /// Gets whether escaping is disabled for the given category. If it's disabled for the entire config, it'll also be
+    /// implicitly disabled for each category. If it's not disabled for the category, it can still be disabled per key.
+    /// </summary>
+    /// <param name="categoryName">The name of the category to check whether escaping is disabled for.</param>
+    /// <returns>True if it's disabled. Otherwise, false.</returns>
+    bool GetWhetherEscapingIsDisabled(string? categoryName);
+    
+    /// <summary>
+    /// Gets whether escaping is disabled for the given key. If it's disabled for the entire config or for the category
+    /// the key's in, it'll also be implicitly disabled for the key.
+    /// </summary>
+    /// <param name="categoryName">The name of the category to check a key in.</param>
+    /// <param name="key">The key to check whether escaping is disabled for.</param>
+    /// <returns>True if it's disabled. Otherwise, false.</returns>
+    bool GetWhetherEscapingIsDisabled(string? categoryName, string key);
 
     /// <summary>
     /// Gets whether a category of the given name exists with any keys.
@@ -302,6 +334,43 @@ public interface IKdeConfig
                 string      rawValue,
                 bool        expansionsAreEnabled = false,
                 bool        isLockedDown         = false);
+
+    /// <summary>
+    /// Sets whether escaping is disabled across the entire config. If it's not, it can still be disabled per category
+    /// and per key.
+    /// </summary>
+    /// <param name="value">True to have it disabled, false to have it not disabled.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any values in the config. This is not supported because these values will not be updated to match
+    /// the new value. This should be set before the config is populated.
+    /// </exception>
+    void SetWhetherEscapingIsDisabled(bool value);
+    
+    /// <summary>
+    /// Sets whether escaping is disabled for a particular category.
+    /// </summary>
+    /// <param name="category">The category to set whether escaping is disabled for.</param>
+    /// <param name="value">True to have it disabled, false to have it not disabled.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any values in the category. This is not supported because these values will not be updated to match
+    /// the new value. This should be set before the category is populated.
+    /// </exception>
+    void SetWhetherEscapingIsDisabled(string? category, bool value);
+    
+    /// <summary>
+    /// Sets whether escaping is disabled for a particular key.
+    /// </summary>
+    /// <param name="category">The category the key is in.</param>
+    /// <param name="key">The key to set whether escaping is disabled for.</param>
+    /// <param name="value">True to have it disabled, false to have it not disabled.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any values for the given key. This is not supported because these values will not be updated to
+    /// match the new value. This should be set before the entry is populated.
+    /// </exception>
+    void SetWhetherEscapingIsDisabled(string? category, string key, bool value);
 
     /// <summary>
     /// Re-evaluates the shell expansions used in all values in this config.

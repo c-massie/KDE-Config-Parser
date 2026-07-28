@@ -1,5 +1,6 @@
 using System.Globalization;
 using Scot.Massie.KDEConfigParser.Assignment;
+using Scot.Massie.KDEConfigParser.Config;
 using Scot.Massie.KDEConfigParser.Entry;
 using Scot.Massie.KDEConfigParser.Utils;
 using Scot.Massie.KDEConfigParser.Utils.Collections;
@@ -10,6 +11,8 @@ namespace Scot.Massie.KDEConfigParser.Category;
 public class KdeConfigCategory
     : IKdeConfigCategory
 {
+    private readonly IKdeConfig _parentConfig;
+
     private readonly IDictionary<string, KdeConfigEntry> _entries = new Dictionary<string, KdeConfigEntry>();
 
     /// <inheritdoc />
@@ -17,6 +20,8 @@ public class KdeConfigCategory
 
     /// <inheritdoc />
     public bool IsEmpty => _entries.Count == 0;
+
+    public bool IsDefaultCategory { get; }
 
     /// <inheritdoc />
     public string? this[string key]
@@ -63,14 +68,24 @@ public class KdeConfigCategory
     /// <summary>
     /// Creates a new config category.
     /// </summary>
+    /// <param name="parentConfig">The configuration this category is for.</param>
+    /// <param name="isDefaultCategory">Whether this is the default category for the configuration this is for.</param>
     /// <param name="name">The name of the category.</param>
     /// <exception cref="FormatException">If the given name is not a valid category name.</exception>
-    public KdeConfigCategory(string name)
+    public KdeConfigCategory(IKdeConfig parentConfig, bool isDefaultCategory, string name)
     {
         if(name.Contains(']'))
             throw new FormatException("Category names may not contain closing square brackets.");
 
-        Name = name;
+        _parentConfig     = parentConfig;
+        IsDefaultCategory = isDefaultCategory;
+        Name              = name;
+    }
+
+    /// <inheritdoc />
+    public bool KeyExists(string key)
+    {
+        return _entries.ContainsKey(key);
     }
 
     /// <inheritdoc />
@@ -118,7 +133,7 @@ public class KdeConfigCategory
     private KdeConfigEntry GetOrCreateEntry(string key)
     {
         if(!_entries.TryGetValue(key, out var entry))
-            _entries[key] = entry = new KdeConfigEntry(key);
+            _entries[key] = entry = new KdeConfigEntry(_parentConfig, this, key);
 
         return entry;
     }

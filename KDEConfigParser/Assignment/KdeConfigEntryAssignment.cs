@@ -6,11 +6,14 @@ namespace Scot.Massie.KDEConfigParser.Assignment;
 public class KdeConfigEntryAssignment
     : IKdeConfigEntryAssignment
 {
-    /// <inheritdoc />
-    public bool IsLockedDown { get; }
+    /// <inheritdoc/>
+    public bool EscapingIsEnabled { get; }
 
     /// <inheritdoc />
     public bool ShellExpansionIsEnabled { get; }
+    
+    /// <inheritdoc />
+    public bool IsLockedDown { get; }
 
     /// <inheritdoc />
     public string RawValue { get; } // Note: Neither escaped, not with shell expansions having taken effect.
@@ -24,12 +27,14 @@ public class KdeConfigEntryAssignment
     private KdeConfigEntryAssignment(string rawValue,
                                      string unexpandedValue,
                                      string value,
+                                     bool   escapingIsEnabled,
                                      bool   shellExpansionIsEnabled,
                                      bool   isLockedDown)
     {
         RawValue                = rawValue;
         UnexpandedValue         = unexpandedValue;
         Value                   = value;
+        EscapingIsEnabled       = escapingIsEnabled;
         ShellExpansionIsEnabled = shellExpansionIsEnabled;
         IsLockedDown            = isLockedDown;
     }
@@ -41,6 +46,10 @@ public class KdeConfigEntryAssignment
     /// The value of the assignment. This should be the <see cref="UnexpandedValue">unexpanded value</see>, and the
     /// other versions of the value will be derived from that.
     /// </param>
+    /// <param name="escapingIsEnabled">
+    /// Whether to allow whitespace and backslashes to be represented in the raw value as escape sequences. See:
+    /// <see cref="EscapingIsEnabled"/>
+    /// </param>
     /// <param name="shellExpansionIsEnabled">
     /// Whether shell expansion is enabled. If it is, the shell will be queried for any referenced shell variables in
     /// order to produce the <see cref="Value">end value.</see> See the format documentation for more information.
@@ -49,12 +58,18 @@ public class KdeConfigEntryAssignment
     /// Whether the value is locked down. See the format documentation for more information.
     /// </param>
     public KdeConfigEntryAssignment(string value,
+                                    bool escapingIsEnabled,
                                     bool shellExpansionIsEnabled,
                                     bool isLockedDown)
     {
-        RawValue                = EscapeText(value);
+        if(!escapingIsEnabled && value.Any(x => x is '\n' or '\r'))
+            throw new FormatException("If escaping isn't enabled, newlines and carriage returns can't be represented "
+                                    + "in a value.");
+        
+        RawValue                = escapingIsEnabled ? EscapeText(value) : value;
         UnexpandedValue         = value;
         Value                   = shellExpansionIsEnabled ? ShellExpand(value) : value;
+        EscapingIsEnabled       = escapingIsEnabled;
         ShellExpansionIsEnabled = shellExpansionIsEnabled;
         IsLockedDown            = isLockedDown;
     }
@@ -76,7 +91,12 @@ public class KdeConfigEntryAssignment
         if(reExpandedValue.Equals(Value))
             return this;
 
-        return new KdeConfigEntryAssignment(RawValue, UnexpandedValue, reExpandedValue, true, IsLockedDown);
+        return new KdeConfigEntryAssignment(RawValue,
+                                            UnexpandedValue,
+                                            reExpandedValue,
+                                            EscapingIsEnabled,
+                                            true,
+                                            IsLockedDown);
     }
 
     /// <summary>
@@ -88,6 +108,10 @@ public class KdeConfigEntryAssignment
     /// yet expanded and special characters having been escaped. The other versions of the value will be derived from
     /// that.
     /// </param>
+    /// <param name="escapingIsEnabled">
+    /// Whether to allow whitespace and backslashes to be represented in the raw value as escape sequences. See:
+    /// <see cref="EscapingIsEnabled"/>
+    /// </param>
     /// <param name="shellExpansionIsEnabled">
     /// Whether shell expansion is enabled. If it is, the shell will be queried for any referenced shell variables in
     /// order to produce the <see cref="Value">end value.</see> (after being de-escaped) See the format documentation
@@ -98,14 +122,16 @@ public class KdeConfigEntryAssignment
     /// </param>
     /// <returns>The new assignment object.</returns>
     public static KdeConfigEntryAssignment NewFromEscapedValue(string escapedValue,
+                                                               bool   escapingIsEnabled,
                                                                bool   shellExpansionIsEnabled, 
                                                                bool   isLockedDown)
     {
         if(escapedValue.Any(x => x is '\n' or '\r'))
             throw new FormatException("Raw values may not contain newlines or carriage returns.");
         
-        var deEscaped = DeEscapeText(escapedValue);
+        var deEscaped = escapingIsEnabled ? DeEscapeText(escapedValue) : escapedValue;
         var expanded  = shellExpansionIsEnabled ? ShellExpand(deEscaped) : deEscaped;
-        return new KdeConfigEntryAssignment(escapedValue, deEscaped, expanded, shellExpansionIsEnabled, isLockedDown);
+        
+        return new(escapedValue, deEscaped, expanded, escapingIsEnabled, shellExpansionIsEnabled, isLockedDown);
     }
 }

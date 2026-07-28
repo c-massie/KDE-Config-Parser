@@ -1,5 +1,7 @@
 using System.Globalization;
 using Scot.Massie.KDEConfigParser.Assignment;
+using Scot.Massie.KDEConfigParser.Category;
+using Scot.Massie.KDEConfigParser.Config;
 using Scot.Massie.KDEConfigParser.Utils;
 using Scot.Massie.KDEConfigParser.Utils.Collections;
 
@@ -9,9 +11,17 @@ namespace Scot.Massie.KDEConfigParser.Entry;
 public class KdeConfigEntry
     : IKdeConfigEntry
 {
+    private readonly IKdeConfig _parentConfig;
+
+    private readonly IKdeConfigCategory _parentCategory;
+    
     private KdeConfigEntryAssignment? _defaultLocalisation = null;
 
     private readonly IDictionary<string, KdeConfigEntryAssignment> _localisations;
+
+    private bool EscapingIsEnabled
+        => !_parentConfig.GetWhetherEscapingIsDisabled(_parentCategory.IsDefaultCategory ? null : _parentCategory.Name,
+                                                       Key);
 
     /// <inheritdoc />
     public string Key { get; }
@@ -25,16 +35,20 @@ public class KdeConfigEntry
     /// <summary>
     /// Creates a new entry.
     /// </summary>
+    /// <param name="parentConfig">The configuration this entry is for.</param>
+    /// <param name="parentCategory">The configuration category this entry is for.</param>
     /// <param name="key">The key of the entry.</param>
     /// <exception cref="FormatException">If the key is invalid.</exception>
-    public KdeConfigEntry(string key)
+    public KdeConfigEntry(IKdeConfig parentConfig, IKdeConfigCategory parentCategory, string key)
     {
         if(key.ContainsAnyOf('[', ']', '='))
             throw new FormatException("Keys cannot contain square brackets or equals signs.");
 
-        Key            = key;
-        _localisations = new Dictionary<string, KdeConfigEntryAssignment>();
-        Localisations  = _localisations.AsReadOnly();
+        _parentConfig   = parentConfig;
+        _parentCategory = parentCategory;
+        Key             = key;
+        _localisations  = new Dictionary<string, KdeConfigEntryAssignment>();
+        Localisations   = _localisations.AsReadOnly();
     }
 
     /// <inheritdoc />
@@ -84,31 +98,37 @@ public class KdeConfigEntry
     /// <inheritdoc />
     public void Set(string value, bool expansionsAreEnabled = false, bool isLockedDown = false)
     {
-        Set(new KdeConfigEntryAssignment(value, expansionsAreEnabled, isLockedDown));
+        Set(new KdeConfigEntryAssignment(value, EscapingIsEnabled, expansionsAreEnabled, isLockedDown));
     }
 
     /// <inheritdoc />
     public void Set(string locale, string value, bool expansionsAreEnabled = false, bool isLockedDown = false)
     {
-        Set(locale, new KdeConfigEntryAssignment(value, expansionsAreEnabled, isLockedDown));
+        Set(locale, new KdeConfigEntryAssignment(value, EscapingIsEnabled, expansionsAreEnabled, isLockedDown));
     }
 
     /// <inheritdoc />
     public void Set(CultureInfo locale, string value, bool expansionsAreEnabled = false, bool isLockedDown = false)
     {
-        Set(locale, new KdeConfigEntryAssignment(value, expansionsAreEnabled, isLockedDown));
+        Set(locale, new KdeConfigEntryAssignment(value, EscapingIsEnabled, expansionsAreEnabled, isLockedDown));
     }
 
     /// <inheritdoc/>
     public void SetRaw(string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false)
     {
-        Set(KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+        Set(KdeConfigEntryAssignment.NewFromEscapedValue(rawValue,
+                                                         EscapingIsEnabled,
+                                                         expansionsAreEnabled,
+                                                         isLockedDown));
     }
 
     /// <inheritdoc/>
     public void SetRaw(string locale, string rawValue, bool expansionsAreEnabled = false, bool isLockedDown = false)
     {
-        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue,
+                                                                 EscapingIsEnabled,
+                                                                 expansionsAreEnabled,
+                                                                 isLockedDown));
     }
 
     /// <inheritdoc/>
@@ -117,7 +137,10 @@ public class KdeConfigEntry
                        bool        expansionsAreEnabled = false,
                        bool        isLockedDown         = false)
     {
-        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue, expansionsAreEnabled, isLockedDown));
+        Set(locale, KdeConfigEntryAssignment.NewFromEscapedValue(rawValue,
+                                                                 EscapingIsEnabled,
+                                                                 expansionsAreEnabled,
+                                                                 isLockedDown));
     }
 
     /// <inheritdoc />
