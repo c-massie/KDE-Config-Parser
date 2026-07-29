@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Scot.Massie.KDEConfigParser.Assignment;
 using Scot.Massie.KDEConfigParser.Category;
+using Scot.Massie.KDEConfigParser.Config.Selector;
 using Scot.Massie.KDEConfigParser.Utils;
 using Scot.Massie.KDEConfigParser.Utils.Collections;
 
@@ -14,16 +16,7 @@ public class KdeConfig : IKdeConfig
     private readonly IDictionary<string, KdeConfigCategory> _namedCategories
         = new Dictionary<string, KdeConfigCategory>();
 
-    private bool _escapingIsDisabled = false;
-
-    private bool _escapingIsDisabledForDefaultCategory = false;
-
-    private readonly ISet<string> _categoriesEscapingIsDisabledFor = new HashSet<string>();
-
-    private readonly ISet<string> _keysInDefaultCategoryEscapingIsDisabledFor = new HashSet<string>();
-
-    private readonly IDictionary<string, ISet<string>> _keysEscapingIsDisabledFor
-        = new Dictionary<string, ISet<string>>();
+    private readonly IKdeConfigSelector _escapingDisabledSelector = new KdeConfigSelector();
 
     /// <inheritdoc />
     public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0;
@@ -144,29 +137,19 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public bool GetWhetherEscapingIsDisabled()
     {
-        return _escapingIsDisabled;
+        return _escapingDisabledSelector.MatchesEverything;
     }
 
     /// <inheritdoc />
     public bool GetWhetherEscapingIsDisabled(string? categoryName)
     {
-        return _escapingIsDisabled
-            || categoryName is null
-                   ? _escapingIsDisabledForDefaultCategory
-                   : _categoriesEscapingIsDisabledFor.Contains(categoryName);
+        return _escapingDisabledSelector.MatchesCategory(categoryName);
     }
 
     /// <inheritdoc />
     public bool GetWhetherEscapingIsDisabled(string? categoryName, string key)
     {
-        if(GetWhetherEscapingIsDisabled(categoryName))
-            return true;
-
-        var keySet = categoryName is null
-                         ? _keysInDefaultCategoryEscapingIsDisabledFor
-                         : _keysEscapingIsDisabledFor.GetOrDefault(categoryName);
-
-        return keySet?.Contains(key) ?? false;
+        return _escapingDisabledSelector.MatchesKey(categoryName, key);
     }
 
     /// <inheritdoc />
@@ -255,15 +238,17 @@ public class KdeConfig : IKdeConfig
     }
 
     /// <inheritdoc />
+    [Obsolete("Use DisableEscaping instead.")]
     public void SetWhetherEscapingIsDisabled(bool value)
     {
         if(!IsEmpty)
             throw new NotSupportedException("Setting whether escaping is disabled on an already-populated config.");
-        
-        _escapingIsDisabled = value;
+
+        _escapingDisabledSelector.MatchesEverything = value;
     }
 
     /// <inheritdoc />
+    [Obsolete("Use DisableEscaping instead.")]
     public void SetWhetherEscapingIsDisabled(string? category, bool value)
     {
         if(category is null)
@@ -271,42 +256,111 @@ public class KdeConfig : IKdeConfig
             if(!_defaultCategory.IsEmpty)
                 throw new NotSupportedException(
                     "Setting whether escaping is disabled on an already-populated category.");
-            
-            _escapingIsDisabledForDefaultCategory = value;
-            return;
         }
-
-        if(CategoryExists(category))
-            throw new NotSupportedException("Setting whether escaping is disabled on an already-populated category.");
+        else
+        {
+            if(CategoryExists(category))
+                throw new NotSupportedException(
+                    "Setting whether escaping is disabled on an already-populated category.");
+        }
         
         if(value)
-            _categoriesEscapingIsDisabledFor.Add(category);
+            _escapingDisabledSelector.AddCategory(category);
         else
-            _categoriesEscapingIsDisabledFor.Remove(category);
+            _escapingDisabledSelector.RemoveCategory(category);
     }
 
     /// <inheritdoc />
+    [Obsolete("Use DisableEscaping instead.")]
     public void SetWhetherEscapingIsDisabled(string? category, string key, bool value)
     {
         if(KeyExists(category, key))
             throw new NotSupportedException("Setting whether escaping is disabled on an already-populated key.");
         
-        ISet<string>? keySet;
+        if(value)
+            _escapingDisabledSelector.AddKey(category, key);
+        else
+            _escapingDisabledSelector.RemoveKey(category, key);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscaping()
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Disabling value-escaping on an already-populated config.");
         
+        _escapingDisabledSelector.MatchesEverything = true;
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForKey(string? category, string key)
+    {
+        if(KeyExists(category, key))
+            throw new NotSupportedException("Disabling value-escaping on an already-populated key.");
+        
+        _escapingDisabledSelector.AddKey(category, key);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForKey(string key)
+    {
+        if(_defaultCategory.KeyExists(key) || _namedCategories.Values.Any(x => x.KeyExists(key)))
+            throw new NotSupportedException("Disabling value-escaping on an already-populated key.");
+        
+        _escapingDisabledSelector.AddKey(key);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForCategory(string? category)
+    {
         if(category is null)
         {
-            keySet = _keysInDefaultCategoryEscapingIsDisabledFor;
+            if(!_defaultCategory.IsEmpty)
+                throw new NotSupportedException("Disabling value-escaping on an already-populated category.");
         }
         else
         {
-            if(!_keysEscapingIsDisabledFor.TryGetValue(category, out keySet))
-                keySet = _keysEscapingIsDisabledFor[category] = new HashSet<string>();
+            if(CategoryExists(category))
+                throw new NotSupportedException("Disabling value-escaping on an already-populated category.");
         }
         
-        if(value)
-            keySet.Add(key);
-        else
-            keySet.Remove(key);
+        _escapingDisabledSelector.AddCategory(category);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForMatchingKeys(string? category, Regex keyMatcher)
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Disabling value-escaping via regex on an already-populated config.");
+        
+        _escapingDisabledSelector.AddKeyMatcher(category, keyMatcher);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForMatchingKeys(Regex keyMatcher)
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Disabling value-escaping via regex on an already-populated config.");
+        
+        _escapingDisabledSelector.AddKeyMatcher(keyMatcher);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForMatchingKeysInMatchingCategories(Regex categoryMatcher, Regex keyMatcher)
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Disabling value-escaping via regex on an already-populated config.");
+        
+        _escapingDisabledSelector.AddCategoryAndKeyMatcher(categoryMatcher, keyMatcher);
+    }
+
+    /// <inheritdoc />
+    public void DisableValueEscapingForMatchingCategories(Regex categoryMatcher)
+    {
+        if(!IsEmpty)
+            throw new NotSupportedException("Disabling value-escaping via regex on an already-populated config.");
+        
+        _escapingDisabledSelector.AddCategoryMatcher(categoryMatcher);
     }
 
     /// <inheritdoc />

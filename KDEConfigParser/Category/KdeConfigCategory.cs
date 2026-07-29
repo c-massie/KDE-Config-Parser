@@ -21,6 +21,7 @@ public class KdeConfigCategory
     /// <inheritdoc />
     public bool IsEmpty => _entries.Count == 0;
 
+    /// <inheritdoc />
     public bool IsDefaultCategory { get; }
 
     /// <inheritdoc />

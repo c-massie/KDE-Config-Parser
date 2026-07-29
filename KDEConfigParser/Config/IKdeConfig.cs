@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Scot.Massie.KDEConfigParser.Assignment;
 
 namespace Scot.Massie.KDEConfigParser.Config;
@@ -334,7 +335,7 @@ public interface IKdeConfig
                 string      rawValue,
                 bool        expansionsAreEnabled = false,
                 bool        isLockedDown         = false);
-
+    
     /// <summary>
     /// Sets whether escaping is disabled across the entire config. If it's not, it can still be disabled per category
     /// and per key.
@@ -345,6 +346,7 @@ public interface IKdeConfig
     /// If there are any values in the config. This is not supported because these values will not be updated to match
     /// the new value. This should be set before the config is populated.
     /// </exception>
+    [Obsolete($"Use {nameof(DisableValueEscaping)} instead.")]
     void SetWhetherEscapingIsDisabled(bool value);
     
     /// <summary>
@@ -357,12 +359,13 @@ public interface IKdeConfig
     /// If there are any values in the category. This is not supported because these values will not be updated to match
     /// the new value. This should be set before the category is populated.
     /// </exception>
+    [Obsolete($"Use {nameof(DisableValueEscapingForCategory)} instead.")]
     void SetWhetherEscapingIsDisabled(string? category, bool value);
     
     /// <summary>
     /// Sets whether escaping is disabled for a particular key.
     /// </summary>
-    /// <param name="category">The category the key is in.</param>
+    /// <param name="category">The category the key is in. Null for the default category.</param>
     /// <param name="key">The key to set whether escaping is disabled for.</param>
     /// <param name="value">True to have it disabled, false to have it not disabled.</param>
     /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
@@ -370,7 +373,107 @@ public interface IKdeConfig
     /// If there are any values for the given key. This is not supported because these values will not be updated to
     /// match the new value. This should be set before the entry is populated.
     /// </exception>
+    [Obsolete($"Use {nameof(DisableValueEscapingForKey)} instead.")]
     void SetWhetherEscapingIsDisabled(string? category, string key, bool value);
+
+    /// <summary>
+    /// Disables escaping of values in this config.
+    /// </summary>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If the config is not empty. This is not supported because values will not be updated to have escaping disabled.
+    /// This should be set before the config is populated.
+    /// </exception>
+    void DisableValueEscaping();
+
+    /// <summary>
+    /// Disables escaping for values for keys with the given name in the given cateogyr.
+    /// </summary>
+    /// <param name="category">The category the key should be in. Null for the default category.</param>
+    /// <param name="key">The key to disable escaping for.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any values for the given key. This is not supported because these values will not be updated to
+    /// have escaping disabled. This should be set before the entry is populated.
+    /// </exception>
+    void DisableValueEscapingForKey(string? category, string key);
+    
+    /// <summary>
+    /// Disables escaping of values for keys with the given name in any category.
+    /// </summary>
+    /// <param name="key">The key to disable escaping for.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any keys with the given name in any category in the config. This is not supported because these
+    /// values will not be updated to have escaping disabled. This should be set before the entry is populated.
+    /// </exception>
+    void DisableValueEscapingForKey(string key);
+
+    /// <summary>
+    /// Disables escaping of values for keys in the given category.
+    /// </summary>
+    /// <param name="category">The category to disable escaping of values in. Null for the default category.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If there are any values in the category. This is not supported because these values will not be updated to have
+    /// escaping disabled. This should be set before the category is populated.
+    /// </exception>
+    void DisableValueEscapingForCategory(string? category);
+
+    /// <summary>
+    /// Disables escaping of values for any keys matching the given regex, in the given category.
+    /// </summary>
+    /// <param name="category">The category the key should be in. Null for the default category.</param>
+    /// <param name="keyMatcher">The regex to compare key names against.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If this config is not empty. This is not supported because any values will not be updated to have escaping
+    /// disabled. This should be set before the config is populated.
+    /// </exception>
+    void DisableValueEscapingForMatchingKeys(string? category, Regex keyMatcher);
+
+    /// <summary>
+    /// Disables escaping of values for any keys matching the given regex, in any category.
+    /// </summary>
+    /// <param name="keyMatcher">The regex to compare key names against.</param>
+    /// <remarks>This is not represented in the text version of this config, and must be set separately.</remarks>
+    /// <exception cref="NotSupportedException">
+    /// If this config is not empty. This is not supported because any values will not be updated to have escaping
+    /// disabled. This should be set before the config is populated.
+    /// </exception>
+    void DisableValueEscapingForMatchingKeys(Regex keyMatcher);
+
+    /// <summary>
+    /// Disables escaping of values for any keys matching the given key regex, in any category matching the given
+    /// category regex.
+    /// </summary>
+    /// <param name="categoryMatcher">The regex to compare category names against.</param>
+    /// <param name="keyMatcher">The regex to compare key names against.</param>
+    /// <remarks>
+    /// This cannot match the default category.
+    /// 
+    /// This is not represented in the text version of this config, and must be set separately.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">
+    /// If this config is not empty. This is not supported because any values will not be updated to have escaping
+    /// disabled. This should be set before the config is populated.
+    /// </exception>
+    void DisableValueEscapingForMatchingKeysInMatchingCategories(Regex categoryMatcher, Regex keyMatcher);
+
+    /// <summary>
+    /// Disables escaping of values for any keys in any category matching the given category regex.
+    /// </summary>
+    /// <param name="categoryMatcher">The regex to compare category names against.</param>
+    /// <remarks>
+    /// This cannot match the default category.
+    /// 
+    /// This is not represented in the text version of this config, and must be set separately.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">
+    /// If this config is not empty. This is not supported because any values will not be updated to have escaping
+    /// disabled. This should be set before the config is populated.
+    /// </exception>
+    void DisableValueEscapingForMatchingCategories(Regex categoryMatcher);
 
     /// <summary>
     /// Re-evaluates the shell expansions used in all values in this config.
