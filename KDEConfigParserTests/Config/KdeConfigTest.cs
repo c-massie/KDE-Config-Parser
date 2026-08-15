@@ -210,6 +210,56 @@ public class KdeConfigTest
                 cfg.Get("second", "key2").Should().Be("value2");
             }
 
+            [Fact]
+            public void EmptyCategoriesArePreserved()
+            {
+                var source = """
+                             [first]
+                             [second]
+                             key=value
+                             
+                             [third]
+                             """;
+
+                var cfg = new KdeConfig();
+                cfg.PreservesAllCategories = true;
+                cfg.LoadFromString(source);
+
+                cfg.GetCategories().Should().BeEquivalentTo(["first", "second", "third"]);
+                cfg.GetKeysInCategory("first").Should().BeEmpty();
+                cfg.GetKeysInCategory("second").Should().BeEquivalentTo(["key"]);
+                cfg.Get("second", "key").Should().Be("value");
+                cfg.GetKeysInCategory("third").Should().BeEmpty();
+            }
+
+            [Fact]
+            public void SpecificEmptyCategoriesArePreserved()
+            {
+                var source = """
+                             [first]
+                             [second]
+                             [third]
+                             key=value
+                             [fourth*]
+                             [fifth]
+                             [sixth~]
+                             [seventh*]
+                             """;
+                
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("*"));
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("~"));
+                cfg.LoadFromString(source);
+
+                cfg.GetCategories().Should().BeEquivalentTo(["third", "fourth*", "sixth~", "seventh*"]);
+                cfg.GetKeysInCategory("third").Should().BeEquivalentTo(["key"]);
+                cfg.Get("third", "key").Should().Be("value");
+                cfg.GetKeysInCategory("fourth*").Should().BeEmpty();
+                cfg.GetKeysInCategory("sixth~").Should().BeEmpty();
+                cfg.GetKeysInCategory("seventh*").Should().BeEmpty();
+                
+            }
+
             [Theory]
             [InlineData("",         Label = "Completely empty")]
             [InlineData("       ",  Label = "Spaces")]
@@ -480,6 +530,89 @@ public class KdeConfigTest
                 result.Should().Be(expected);
             }
 
+            [Fact]
+            public void EmptyEnforcedCategories()
+            {
+                var expected = """
+                               [first]
+                               
+                               [second]
+                               
+                               [third]
+                               
+                               """;
+
+                var cfg = new KdeConfig();
+                cfg.EnforceCategories(["first", "second", "third"]);
+                
+                var writer = new StringWriter();
+                cfg.WriteToTextWriter(writer);
+                var result = writer.ToString();
+
+                result.Should().Be(expected);
+            }
+
+            [Fact]
+            public void EmptyCategoriesRetained()
+            {
+                var expected = """
+                               [first]
+
+                               [second]
+
+                               [third]
+                               
+                               """;
+                
+                var cfg = new KdeConfig();
+                cfg.PreservesAllCategories = true;
+                
+                cfg["first", "key"]  = "value";
+                cfg["second", "key"] = "value";
+                cfg["third", "key"]  = "value";
+                cfg.Clear("first",  "key");
+                cfg.Clear("second", "key");
+                cfg.Clear("third",  "key");
+                
+                var writer = new StringWriter();
+                cfg.WriteToTextWriter(writer);
+                string result = writer.ToString();
+
+                result.Should().Be(expected);
+            }
+
+            [Fact]
+            public void SpecificEmptyCategoriesRetained()
+            {
+                var expected = """
+                               [first*]
+
+                               [third~]
+                               
+                               """;
+
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("~"));
+                
+                cfg["first*", "key"]  = "value";
+                cfg["second", "key"] = "value";
+                cfg["third~", "key"]  = "value";
+                cfg["umpteenth", "key"]  = "value";
+                cfg.Clear("first*",  "key");
+                cfg.Clear("second", "key");
+                cfg.Clear("third~",  "key");
+                cfg.Clear("umpteenth",  "key");
+                
+                var writer = new StringWriter();
+                cfg.WriteToTextWriter(writer);
+                var result = writer.ToString();
+
+                result.Should().Be(expected);
+            }
+            
+            
+            
             [Theory]
             [InlineData("   name",   "[   name]",   Label = "Leading whitespace")]
             [InlineData("name   ",   "[name   ]",   Label = "Trailing whitespace")]

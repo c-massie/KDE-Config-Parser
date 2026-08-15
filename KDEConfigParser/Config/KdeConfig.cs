@@ -16,10 +16,20 @@ public class KdeConfig : IKdeConfig
     private readonly IDictionary<string, KdeConfigCategory> _namedCategories
         = new Dictionary<string, KdeConfigCategory>();
 
+    private readonly HashSet<string> _enforcedCategories = new();
+
     private readonly IKdeConfigSelector _escapingDisabledSelector = new KdeConfigSelector();
 
+    private readonly ICollection<Func<string, bool>> _categoryPreservationTests = [];
+
     /// <inheritdoc />
-    public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0;
+    public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0 && _enforcedCategories.Count == 0;
+
+    /// <inheritdoc />
+    public ICollection<string> EnforcedCategories => _enforcedCategories.ToArray();
+
+    /// <inheritdoc />
+    public bool PreservesAllCategories { get; set; }
 
     /// <inheritdoc />
     public string? this[string? category, string key]
@@ -71,6 +81,17 @@ public class KdeConfig : IKdeConfig
         _defaultCategory = new(this, true, "");
     }
 
+    private bool CategoryShouldBePreserved(string categoryName)
+    {
+        if(PreservesAllCategories)
+            return true;
+
+        if(_categoryPreservationTests.Any(test => test(categoryName)))
+            return true;
+
+        return false;
+    }
+
     private KdeConfigCategory? GetCategory(string? category)
     {
         return category is null ? _defaultCategory : _namedCategories.GetOrDefault(category);
@@ -84,6 +105,12 @@ public class KdeConfig : IKdeConfig
         if(_namedCategories.TryGetValue(category, out var cat))
             return cat;
 
+        
+        // Creating new category.
+        
+        if(CategoryShouldBePreserved(category))
+            _enforcedCategories.Add(category);
+        
         return _namedCategories[category] = new KdeConfigCategory(this, false, category);
     }
 
@@ -155,13 +182,13 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public bool CategoryExists(string categoryName)
     {
-        return _namedCategories.ContainsKey(categoryName);
+        return _namedCategories.ContainsKey(categoryName) || _enforcedCategories.Contains(categoryName);
     }
 
     /// <inheritdoc />
     public ICollection<string> GetCategories()
     {
-        return _namedCategories.Keys.ToArray();
+        return _namedCategories.Keys.Concat(_enforcedCategories).Distinct().Order().ToArray();
     }
 
     /// <inheritdoc />
@@ -171,6 +198,25 @@ public class KdeConfig : IKdeConfig
             return _defaultCategory.GetKeys();
         
         return _namedCategories.GetOrDefault(category)?.GetKeys() ?? [];
+    }
+
+    /// <inheritdoc />
+    public void PreserveCategoriesWhere(Func<string, bool> test)
+    {
+        _categoryPreservationTests.Add(test);
+    }
+
+    /// <inheritdoc />
+    public void EnforceCategory(string categoryName)
+    {
+        _enforcedCategories.Add(categoryName);
+    }
+
+    /// <inheritdoc />
+    public void EnforceCategories(IEnumerable<string> categoryNames)
+    {
+        foreach(var name in categoryNames)
+            _enforcedCategories.Add(name);
     }
 
     /// <inheritdoc />
@@ -399,6 +445,14 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public void Clear()
     {
+        ClearRecords();
+        ClearEnforcedCategories();
+        ClearCategoryPreservations();
+    }
+
+    /// <inheritdoc />
+    public void ClearRecords()
+    {
         _defaultCategory.Clear();
         _namedCategories.Clear();
     }
@@ -470,6 +524,19 @@ public class KdeConfig : IKdeConfig
     }
 
     /// <inheritdoc />
+    public void ClearEnforcedCategories()
+    {
+        _enforcedCategories.Clear();
+    }
+
+    /// <inheritdoc />
+    public void ClearCategoryPreservations()
+    {
+        PreservesAllCategories = false;
+        _categoryPreservationTests.Clear();
+    }
+
+    /// <inheritdoc />
     public void ReadFromTextReader(TextReader reader)
     {
         var currentCategory = _defaultCategory;
@@ -520,7 +587,7 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public void LoadFromString(string source)
     {
-        Clear();
+        ClearRecords();
         using var reader = new StringReader(source);
         ReadFromTextReader(reader);
     }
@@ -537,7 +604,7 @@ public class KdeConfig : IKdeConfig
         if(!_defaultCategory.IsEmpty)
             _defaultCategory.WriteToTextWriter(writer, false);
 
-        using var iter = _namedCategories.GetEnumerator();
+        using var iter = GetCategories().GetEnumerator();
 
         {
             if(!iter.MoveNext())
@@ -546,13 +613,20 @@ public class KdeConfig : IKdeConfig
             if(!_defaultCategory.IsEmpty)
                 writer.WriteLine();
 
-            iter.Current.Value.WriteToTextWriter(writer);
+            if(_namedCategories.TryGetValue(iter.Current, out var cat))
+                cat.WriteToTextWriter(writer);
+            else
+                (new KdeConfigCategory(this, false, iter.Current)).WriteToTextWriter(writer);
         }
 
         while(iter.MoveNext())
         {
             writer.WriteLine();
-            iter.Current.Value.WriteToTextWriter(writer);
+            
+            if(_namedCategories.TryGetValue(iter.Current, out var cat))
+                cat.WriteToTextWriter(writer);
+            else
+                (new KdeConfigCategory(this, false, iter.Current)).WriteToTextWriter(writer);
         }
     }
 

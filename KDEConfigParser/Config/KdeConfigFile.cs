@@ -36,7 +36,7 @@ public class KdeConfigFile : KdeConfig, IKdeConfigFile
     {
         using var fs     = new FileStream(FilePath, FileMode.Open, FileAccess.Read);
         using var reader = new StreamReader(fs);
-        Clear();
+        ClearRecords();
         ReadFromTextReader(reader);
     }
 
@@ -47,7 +47,7 @@ public class KdeConfigFile : KdeConfig, IKdeConfigFile
         {
             using var fs     = new FileStream(FilePath, FileMode.Open, FileAccess.Read);
             using var reader = new StreamReader(fs);
-            Clear();
+            ClearRecords();
             ReadFromTextReader(reader);
         }
         catch(FileNotFoundException)

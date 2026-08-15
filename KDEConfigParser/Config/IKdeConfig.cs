@@ -26,6 +26,16 @@ public interface IKdeConfig
     bool IsEmpty { get; }
 
     /// <summary>
+    /// Category names that exist within this config whether they have any keys or not.
+    /// </summary>
+    ICollection<string> EnforcedCategories { get; }
+
+    /// <summary>
+    /// Whether categories are preserved despite having no keys associated. All categories become enforced.
+    /// </summary>
+    bool PreservesAllCategories { get; set; }
+
+    /// <summary>
     /// Accesses the given key in the given category.
     /// </summary>
     /// <param name="category">The category to look for the key in. If null, the default category is looked in.</param>
@@ -197,17 +207,19 @@ public interface IKdeConfig
     bool GetWhetherEscapingIsDisabled(string? categoryName, string key);
 
     /// <summary>
-    /// Gets whether a category of the given name exists with any keys.
+    /// Gets whether a category of the given name exists with any keys, or is enforced.
     /// </summary>
     /// <param name="categoryName">The name of the category to check for.</param>
-    /// <returns>True if this contains a category of the given name. Otherwise, false.</returns>
-    /// <remarks>A category cannot exist with no keys.</remarks>
+    /// <returns>
+    /// True if this contains a category of the given name or the category name is enforced. Otherwise, false.
+    /// </returns>
+    /// <remarks>A category can only exist with no keys if it is enforced.</remarks>
     bool CategoryExists(string categoryName);
 
     /// <summary>
-    /// Gets the names of all categories with keys.
+    /// Gets the names of all categories.
     /// </summary>
-    /// <returns>A collection of the names of all existing categories with keys.</returns>
+    /// <returns>A collection of the names of all existing categories with keys and enforced categories.</returns>
     ICollection<string> GetCategories();
 
     /// <summary>
@@ -219,6 +231,27 @@ public interface IKdeConfig
     /// Keys are given if *any* localisation exists, even if none are appropriate for the user's current locale.
     /// </remarks>
     ICollection<string> GetKeysInCategory(string? category);
+
+    /// <summary>
+    /// Indicates that categories should be preserved where they adhere to the given predicate. This means that they
+    /// will be enforced - i.e. that they won't be removed, even when they have no keys associated.
+    /// </summary>
+    /// <param name="test">The predicate which determines whether a category name should be preserved.</param>
+    void PreserveCategoriesWhere(Func<string, bool> test);
+
+    /// <summary>
+    /// Indicates that a category of the given name should be present, even when there are no keys associated with it.
+    /// The category will immediately be considered to be present in the config.
+    /// </summary>
+    /// <param name="categoryName">The name of the category to enforce the presence of.</param>
+    void EnforceCategory(string categoryName);
+
+    /// <summary>
+    /// Indicates that categories of the given name should be present, even when there are no keys associated with them.
+    /// The categories will immediately be considered to be present in the config.
+    /// </summary>
+    /// <param name="categoryNames">The names of the categories to enforce the presence of.</param>
+    void EnforceCategories(IEnumerable<string> categoryNames);
 
     /// <summary>
     /// Sets the value for the given key in the given category.
@@ -387,7 +420,7 @@ public interface IKdeConfig
     void DisableValueEscaping();
 
     /// <summary>
-    /// Disables escaping for values for keys with the given name in the given cateogyr.
+    /// Disables escaping for values for keys with the given name in the given category.
     /// </summary>
     /// <param name="category">The category the key should be in. Null for the default category.</param>
     /// <param name="key">The key to disable escaping for.</param>
@@ -521,6 +554,12 @@ public interface IKdeConfig
     void Clear();
 
     /// <summary>
+    /// Removes all key/value pairs in this configuration. Does not remove rules for preserving categories, nor
+    /// category names already enforced.
+    /// </summary>
+    void ClearRecords();
+
+    /// <summary>
     /// Removes everything in the given category.
     /// </summary>
     /// <param name="category">The name of the category to clear. Null specifies the default category.</param>
@@ -557,6 +596,18 @@ public interface IKdeConfig
     /// The specific locale to clear. The invariant culture to clear specifically where no locale is provided.
     /// </param>
     void Clear(string? category, string key, CultureInfo locale);
+
+    /// <summary>
+    /// Clears the collection of enforced categories.
+    /// </summary>
+    /// <remarks>The categories may still exist, if they have associated keys.</remarks>
+    void ClearEnforcedCategories();
+
+    /// <summary>
+    /// Clears the rules for preserving categories. After calling this, no newly empty categories will be preserved.
+    /// Existing enforced categories will still be enforced.
+    /// </summary>
+    void ClearCategoryPreservations();
 
     /// <summary>
     /// Reads the remaining lines from the given text reader, handling them as either category names or entries.
