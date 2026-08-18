@@ -1,0 +1,11 @@
+Breaking changes to make when releasing version 3.0.0:
+
+TO DO: Remove obsolete methods from IKdeConfig and its implementations.
+
+TO DO: In IKdeConfig, IKdeConfigFile, and implementations, settle on either "category" or "categoryName" as the argument
+       name for passing a category name into a method. "categoryName" is more technically accurate, especially
+       internally where "category" could refer to instances of IKdeConfigCategory rather than strings, but consumers of
+       IKdeConfig wouldn't see IKdeConfigCategory and "category" may be more succinct. I'm leaning towards
+       "categoryName".
+
+TO DO: Rename `IKdeConfig.ClearCategoryPreservations()` to `.ClearCategoryPreservationRules()`

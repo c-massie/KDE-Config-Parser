@@ -758,4 +758,325 @@ public class KdeConfigTest
             }
         }
     }
+
+    public class Retention
+    {
+        public class AllCategories
+        {
+            [Fact]
+            public void ShouldRetainCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreservesAllCategories = true;
+
+                cfg["category", "key"] = "value";
+                cfg.Clear("category", "key");
+
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEmpty();
+            }
+            
+            [Fact]
+            public void SetFalseDeletesEmptyCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreservesAllCategories = true;
+
+                cfg["category", "key"] = "value";
+                cfg.Clear("category", "key");
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+
+                cfg.PreservesAllCategories = false;
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void SetFalseShouldntDeletePopulatedCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreservesAllCategories = true;
+
+                cfg["category", "key"] = "value";
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+
+                cfg.PreservesAllCategories = false;
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+            }
+
+            [Fact]
+            public void SetTrueShouldntAddNewCategories()
+            {
+                var cfg = new KdeConfig();
+
+                cfg["category", "key"] = "value";
+                cfg.Clear("category", "key");
+                
+                cfg.PreservesAllCategories = true;
+                cfg.GetCategories().Should().BeEmpty();
+            }
+        }
+
+        public class ConditionallyPreservedCategories
+        {
+            [Fact]
+            public void ShouldRetainMatchingCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+                
+                cfg["category*", "key"] = "value";
+                cfg.Clear("category*", "key");
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                cfg.GetKeysInCategory("category*").Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ShouldntRetainNonMatchingCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+
+                cfg["category", "key"] = "value";
+                cfg.Clear("category", "key");
+                
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ClearingShouldntDeletePopulatedCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+                
+                cfg["category*", "key"] = "value";
+                
+                cfg.ClearCategoryPreservations();
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+            }
+
+            [Fact]
+            public void ClearingShouldDeleteEmptyCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+                
+                cfg["category*", "key"] = "value";
+                cfg.Clear("category*", "key");
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                
+                cfg.ClearCategoryPreservations();
+                
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void AddingConditionShouldntAddNewCategory()
+            {
+                var cfg = new KdeConfig();
+
+                cfg["category*", "key"] = "value";
+                cfg.Clear("category*", "key");
+                
+                cfg.PreserveCategoriesWhere(cat => cat.EndsWith("*"));
+                
+                cfg.GetCategories().Should().BeEmpty();
+            }
+        }
+
+        public class EnforcedCategories
+        {
+            [Fact]
+            public void AddingEnforcedCategoryAddsCategory()
+            {
+                var cfg = new KdeConfig();
+                
+                cfg.EnforceCategory("category");
+
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+            }
+
+            [Fact]
+            public void AddingExistingEnforcedCategoryDoesntAffectCategory()
+            {
+                var cfg = new KdeConfig();
+                cfg["category", "key"] = "value";
+                
+                cfg.EnforceCategory("category");
+
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEquivalentTo(["key"]);
+                cfg["category", "key"].Should().Be("value");
+            }
+
+            [Fact]
+            public void EnforcedCategoryRetainedWhenEmpty()
+            {
+                var cfg = new KdeConfig();
+                cfg["category", "key"] = "value";
+                
+                cfg.EnforceCategory("category");
+                cfg.Clear("category", "key");
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ClearingDoesntAffectPopulatedCategories()
+            {
+                var cfg = new KdeConfig();
+                
+                cfg.EnforceCategory("category");
+                cfg["category", "key"] = "value";
+                
+                cfg.ClearEnforcedCategories();
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEquivalentTo(["key"]);
+                cfg["category", "key"].Should().Be("value");
+            }
+
+            [Fact]
+            public void ClearingRemovesEmptyEnforcedCategories()
+            {
+                var cfg = new KdeConfig();
+                
+                cfg.EnforceCategory("category");
+                cfg["category", "key"] = "value";
+                cfg.Clear("category", "key");
+                cfg.ClearEnforcedCategories();
+
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void NonEnforcedNotRetainedWhenEmpty()
+            {
+                var cfg = new KdeConfig();
+                
+                cfg["category", "key"] = "value";
+                cfg.EnforceCategory("something else");
+                cfg.Clear("category", "key");
+
+                cfg.GetCategories().Should().BeEquivalentTo(["something else"]);
+                cfg.GetKeysInCategory("something else").Should().BeEmpty();
+            }
+        }
+
+        public class InteractionsBetweenDifferentTypes
+        {
+            [Fact]
+            public void ClearingPreservationsDoesntRemoveAnythingWhenAllArePreserved()
+            {
+                var cfg = new KdeConfig();
+                cfg["category*", "key"] = "value";
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("*"));
+                cfg.PreservesAllCategories = true;
+                cfg.Clear("category*", "key");
+                
+                cfg.ClearCategoryPreservations();
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                cfg.GetKeysInCategory("category*").Should().BeEmpty();
+
+                cfg.PreservesAllCategories = false;
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ClearingPreservationDoesntRemoveEnforcedCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg["category*", "key"] = "value";
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("*"));
+                cfg.EnforceCategory("category*");
+                cfg.Clear("category*", "key");
+                
+                cfg.ClearCategoryPreservations();
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                cfg.GetKeysInCategory("category*").Should().BeEmpty();
+
+                cfg.ClearEnforcedCategories();
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ClearingEnforcedDoesntRemoveAnythingWhenAllArePreserved()
+            {
+                var cfg = new KdeConfig();
+                cfg["category", "key"] = "value";
+                cfg.EnforceCategory("category");
+                cfg.PreservesAllCategories = true;
+                cfg.Clear("category", "key");
+                
+                cfg.ClearEnforcedCategories();
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEmpty();
+
+                cfg.PreservesAllCategories = false;
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void ClearingEnforcedDoesntRemoveConditionallyPreservedCategories()
+            {
+                var cfg = new KdeConfig();
+                cfg["category*", "key"] = "value";
+                cfg.EnforceCategory("category*");
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("*"));
+                cfg.Clear("category*", "key");
+                
+                cfg.ClearEnforcedCategories();
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                cfg.GetKeysInCategory("category*").Should().BeEmpty();
+                
+                cfg.ClearCategoryPreservations();
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void SetPreserveAllToFalseDoesntRemoveEnforced()
+            {
+                var cfg = new KdeConfig();
+                cfg["category", "key"]     = "value";
+                cfg.PreservesAllCategories = true;
+                cfg.EnforceCategory("category");
+                cfg.Clear("category", "key");
+
+                cfg.PreservesAllCategories = false;
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category"]);
+                cfg.GetKeysInCategory("category").Should().BeEmpty();
+
+                cfg.ClearEnforcedCategories();
+                cfg.GetCategories().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void SetPreserveAllToFalseDoesntRemoveConditionallyPreserved()
+            {
+                var cfg = new KdeConfig();
+                cfg["category*", "key"]    = "value";
+                cfg.PreservesAllCategories = true;
+                cfg.PreserveCategoriesWhere(c => c.EndsWith("*"));
+                cfg.Clear("category*", "key");
+
+                cfg.PreservesAllCategories = false;
+                
+                cfg.GetCategories().Should().BeEquivalentTo(["category*"]);
+                cfg.GetKeysInCategory("category*").Should().BeEmpty();
+
+                cfg.ClearCategoryPreservations();
+                cfg.GetCategories().Should().BeEmpty();
+            }
+        }
+    }
 }

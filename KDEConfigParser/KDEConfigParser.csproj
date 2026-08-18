@@ -7,7 +7,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Scot.Massie.KDEConfigParser</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>2.3</Version>
+        <Version>2.3.1</Version>
         <Authors>Chris Massie</Authors>
         <Description>Library for saving, loading, and interacting with KDE configuration files.</Description>
         <PackageProjectUrl>https://github.com/c-massie/KDE-Config-Parser</PackageProjectUrl>
@@ -19,7 +19,7 @@
         <RepositoryType>git</RepositoryType>
         <AssemblyName>KDE Config Parser</AssemblyName>
         <Product>KDE Config Parser</Product>
-        <AssemblyVersion>2.3</AssemblyVersion>
+        <AssemblyVersion>2.3.1</AssemblyVersion>
     </PropertyGroup>
 
 </Project>

@@ -604,8 +604,8 @@ public interface IKdeConfig
     void ClearEnforcedCategories();
 
     /// <summary>
-    /// Clears the rules for preserving categories. After calling this, no newly empty categories will be preserved.
-    /// Existing enforced categories will still be enforced.
+    /// Clears the rules for preserving categories. After calling this, unless all categories are being preserved, no
+    /// newly empty categories will be preserved. Existing enforced categories will still be enforced.
     /// </summary>
     void ClearCategoryPreservations();
 

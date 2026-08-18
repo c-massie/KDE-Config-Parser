@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Scot.Massie.KDEConfigParser.Assignment;
@@ -18,18 +19,40 @@ public class KdeConfig : IKdeConfig
 
     private readonly HashSet<string> _enforcedCategories = new();
 
+    private readonly HashSet<string> _categoryNamesPreservedByRules = new();
+
     private readonly IKdeConfigSelector _escapingDisabledSelector = new KdeConfigSelector();
 
     private readonly ICollection<Func<string, bool>> _categoryPreservationTests = [];
 
+    private bool _preservesAllCategories;
+    
     /// <inheritdoc />
-    public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0 && _enforcedCategories.Count == 0;
+    public bool IsEmpty => _defaultCategory.IsEmpty && _namedCategories.Count == 0;
 
     /// <inheritdoc />
-    public ICollection<string> EnforcedCategories => _enforcedCategories.ToArray();
+    public ICollection<string> EnforcedCategories => _enforcedCategories.ToImmutableArray();
 
     /// <inheritdoc />
-    public bool PreservesAllCategories { get; set; }
+    public bool PreservesAllCategories
+    {
+        get => _preservesAllCategories;
+
+        set
+        {
+            if(value != _preservesAllCategories)
+            {
+                _preservesAllCategories = value;
+
+                if(!_preservesAllCategories)
+                {
+                    foreach(var (catName, cat) in _namedCategories.Select(kv => (kv.Key, kv.Value)).ToArray())
+                        if(!CategoryIsBeingIndividuallyPreserved(catName) && cat.IsEmpty)
+                            _namedCategories.Remove(catName);
+                }
+            }
+        }
+    }
 
     /// <inheritdoc />
     public string? this[string? category, string key]
@@ -81,37 +104,34 @@ public class KdeConfig : IKdeConfig
         _defaultCategory = new(this, true, "");
     }
 
-    private bool CategoryShouldBePreserved(string categoryName)
+    private bool CategoryShouldBePreservedByRule(string categoryName)
     {
-        if(PreservesAllCategories)
-            return true;
-
-        if(_categoryPreservationTests.Any(test => test(categoryName)))
-            return true;
-
-        return false;
+        return _categoryPreservationTests.Any(test => test(categoryName));
     }
 
-    private KdeConfigCategory? GetCategory(string? category)
+    private bool CategoryIsBeingIndividuallyPreserved(string categoryName)
     {
-        return category is null ? _defaultCategory : _namedCategories.GetOrDefault(category);
+        return _enforcedCategories.Contains(categoryName)
+            || _categoryNamesPreservedByRules.Contains(categoryName);
     }
 
-    private KdeConfigCategory GetOrCreateCategory(string? category)
+    private KdeConfigCategory? GetCategory(string? categoryName)
     {
-        if(category is null)
+        return categoryName is null ? _defaultCategory : _namedCategories.GetOrDefault(categoryName);
+    }
+
+    private KdeConfigCategory GetOrCreateCategory(string? categoryName)
+    {
+        if(categoryName is null)
             return _defaultCategory;
 
-        if(_namedCategories.TryGetValue(category, out var cat))
+        if(_namedCategories.TryGetValue(categoryName, out var cat))
             return cat;
 
+        if(CategoryShouldBePreservedByRule(categoryName))
+            _categoryNamesPreservedByRules.Add(categoryName);
         
-        // Creating new category.
-        
-        if(CategoryShouldBePreserved(category))
-            _enforcedCategories.Add(category);
-        
-        return _namedCategories[category] = new KdeConfigCategory(this, false, category);
+        return _namedCategories[categoryName] = new KdeConfigCategory(this, false, categoryName);
     }
 
     /// <inheritdoc />
@@ -182,13 +202,13 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public bool CategoryExists(string categoryName)
     {
-        return _namedCategories.ContainsKey(categoryName) || _enforcedCategories.Contains(categoryName);
+        return _namedCategories.ContainsKey(categoryName);
     }
 
     /// <inheritdoc />
     public ICollection<string> GetCategories()
     {
-        return _namedCategories.Keys.Concat(_enforcedCategories).Distinct().Order().ToArray();
+        return _namedCategories.Keys.ToArray();
     }
 
     /// <inheritdoc />
@@ -204,19 +224,26 @@ public class KdeConfig : IKdeConfig
     public void PreserveCategoriesWhere(Func<string, bool> test)
     {
         _categoryPreservationTests.Add(test);
+
+        foreach(var catName in _namedCategories.Keys)
+            if(test(catName))
+                _categoryNamesPreservedByRules.Add(catName);
     }
 
     /// <inheritdoc />
     public void EnforceCategory(string categoryName)
     {
         _enforcedCategories.Add(categoryName);
+
+        if(!_namedCategories.ContainsKey(categoryName))
+            _namedCategories[categoryName] = new KdeConfigCategory(this, false, categoryName);
     }
 
     /// <inheritdoc />
     public void EnforceCategories(IEnumerable<string> categoryNames)
     {
         foreach(var name in categoryNames)
-            _enforcedCategories.Add(name);
+            EnforceCategory(name);
     }
 
     /// <inheritdoc />
@@ -445,16 +472,40 @@ public class KdeConfig : IKdeConfig
     /// <inheritdoc />
     public void Clear()
     {
-        ClearRecords();
-        ClearEnforcedCategories();
-        ClearCategoryPreservations();
+        // TO DO: Think about whether this method should remove all content to do with value escaping. I think this
+        //        should be fine, even though it's intended to only be applied when initially created? Because the
+        //        config will be empty after calling this anyway.
+        
+        PreservesAllCategories = false;
+        _enforcedCategories.Clear();
+        _categoryNamesPreservedByRules.Clear();
+        _categoryPreservationTests.Clear();
+        _defaultCategory.Clear();
+        _namedCategories.Clear();
     }
 
     /// <inheritdoc />
     public void ClearRecords()
     {
         _defaultCategory.Clear();
-        _namedCategories.Clear();
+        
+        if(PreservesAllCategories)
+            foreach(var cat in _namedCategories.Values)
+                cat.Clear();
+        else if(_enforcedCategories.Count == 0 && _categoryNamesPreservedByRules.Count == 0)
+            _namedCategories.Clear();
+        else
+        {
+            var keys = _namedCategories.Keys.ToArray();
+
+            foreach(var key in keys)
+            {
+                if(CategoryIsBeingIndividuallyPreserved(key))
+                    _namedCategories[key].Clear();
+                else
+                    _namedCategories.Remove(key);
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -466,7 +517,10 @@ public class KdeConfig : IKdeConfig
             return;
         }
 
-        _namedCategories.Remove(category);
+        if(CategoryIsBeingIndividuallyPreserved(category))
+            _namedCategories.GetOrDefault(category)?.Clear();
+        else
+            _namedCategories.Remove(category);
     }
 
     /// <inheritdoc />
@@ -482,9 +536,7 @@ public class KdeConfig : IKdeConfig
             return;
 
         cat.Clear(key);
-
-        if(cat.IsEmpty)
-            _namedCategories.Remove(category);
+        RemoveCategoryIfNeeded(cat);
     }
 
     /// <inheritdoc />
@@ -500,9 +552,7 @@ public class KdeConfig : IKdeConfig
             return;
 
         cat.Clear(key, locale);
-
-        if(cat.IsEmpty)
-            _namedCategories.Remove(category);
+        RemoveCategoryIfNeeded(cat);
     }
 
     /// <inheritdoc />
@@ -518,22 +568,48 @@ public class KdeConfig : IKdeConfig
             return;
 
         cat.Clear(key, locale);
-
-        if(cat.IsEmpty)
-            _namedCategories.Remove(category);
+        RemoveCategoryIfNeeded(cat);
     }
 
     /// <inheritdoc />
     public void ClearEnforcedCategories()
     {
+        if(!PreservesAllCategories)
+        {
+            var keysToRemove = _enforcedCategories
+                              .Select(catName => (Found: _namedCategories.TryGetValue(catName, out var cat),
+                                                  CatName: catName,
+                                                  Cat: cat))
+                              .Where(x => x.Found)
+                              .Where(x => x.Cat!.IsEmpty)
+                              .Where(x => !_categoryNamesPreservedByRules.Contains(x.CatName));
+
+            foreach(var (_, catName, _) in keysToRemove)
+                _namedCategories.Remove(catName);
+        }
+
         _enforcedCategories.Clear();
     }
 
     /// <inheritdoc />
     public void ClearCategoryPreservations()
     {
-        PreservesAllCategories = false;
+        if(!PreservesAllCategories)
+        {
+            var keysToRemove = _categoryNamesPreservedByRules
+                              .Select(catName => (Found: _namedCategories.TryGetValue(catName, out var cat),
+                                                  CatName: catName,
+                                                  Cat: cat))
+                              .Where(x => x.Found)
+                              .Where(x => x.Cat!.IsEmpty)
+                              .Where(x => !_enforcedCategories.Contains(x.CatName));
+            
+            foreach(var (_, catName, _) in keysToRemove)
+                _namedCategories.Remove(catName);
+        }
+        
         _categoryPreservationTests.Clear();
+        _categoryNamesPreservedByRules.Clear();
     }
 
     /// <inheritdoc />
@@ -560,10 +636,22 @@ public class KdeConfig : IKdeConfig
 
     private void ClearEmptyCategories()
     {
-        var categoriesToRemove = _namedCategories.Where(kv => kv.Value.IsEmpty).Select(kv => kv.Key).ToArray();
+        if(PreservesAllCategories)
+            return;
 
-        for(int i = 0; i < categoriesToRemove.Length; i++)
-            _namedCategories.Remove(categoriesToRemove[i]);
+        var keysToRemove = _namedCategories.Where(kv => kv.Value.IsEmpty)
+                                           .Where(kv => !CategoryIsBeingIndividuallyPreserved(kv.Key))
+                                           .Select(kv => kv.Key)
+                                           .ToArray();
+
+        foreach(var key in keysToRemove)
+            _namedCategories.Remove(key);
+    }
+
+    private void RemoveCategoryIfNeeded(IKdeConfigCategory category)
+    {
+        if(!PreservesAllCategories && category.IsEmpty && !CategoryIsBeingIndividuallyPreserved(category.Name))
+            _namedCategories.Remove(category.Name);
     }
 
     private void ReadFromSingleLineString(KdeConfigCategory category, string source)
